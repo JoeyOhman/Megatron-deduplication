@@ -2,12 +2,16 @@ The following steps show how to prepare training dataset to train the mode.
 
 # Libraries to install
 
+After cloning LSH-repo, set `USE_CYTHON` to `True` in its `setup.py`
+
 ```
     pip install ftfy langdetect numpy torch pandas nltk sentencepiece boto3 tqdm regex bs4 newspaper3k htmlmin tldextract 
     git clone https://github.com/mattilyra/LSH
     cd LSH
     python setup.py install
 ``` 
+
+To deduplicate everything in `data_in` directory: `./dedup.sh`
 
 # Download the dataset
 
