@@ -27,7 +27,7 @@ import os
 
 # This function is adapted from:
 #   https://github.com/mattilyra/LSH/blob/master/examples/Introduction.ipynb
-def shingles(text, char_ngram=5):
+def shingles(text, char_ngram):
     return set(text[head:head + char_ngram]
                for head in range(0, len(text) - char_ngram))
 
@@ -72,14 +72,14 @@ def url_pairs_to_remove(args, bucket_urls, url_doc):
         items = list(bucket_urls)
         remove_urls = []
         main_url = items[np.random.randint(0, len(items))]
-        main_dhingles = shingles(url_doc[main_url])
+        main_dhingles = shingles(url_doc[main_url], args.char_n_gram)
 
         for i in range(0, len(items)):
             counter_local += 1
             other_url = items[i]
             if other_url == main_url:
                 continue
-            other_shingles = shingles(url_doc[other_url])
+            other_shingles = shingles(url_doc[other_url], args.char_n_gram)
             try:
                 jaccard_sim = jaccard(main_dhingles, other_shingles, args)
             except Exception as e:
@@ -138,7 +138,7 @@ def find_pair_urls_parallel(args, lshcache, url_doc):
     # compute jaccards of buckets in bin in parallel (parallelism
     # limited to # of bins)
     num_bins = len(lshcache.bins)
-    pool = multiprocessing.Pool(num_bins)
+    pool = multiprocessing.Pool(min(num_bins, args.max_workers))
     compute_jaccard_partial = partial(compute_jaccard, num_bins=num_bins, \
         start_time_local=start_time)
     # don't need to pass args and url_doc as they are already shared
@@ -219,7 +219,14 @@ if __name__ == '__main__':
                         ' this value should be divisible by num-bands')
     parser.add_argument('--jaccard-parallel', action='store_true',
                        help='Use this to process large number of documents.')
+    parser.add_argument('--char-n-gram', type=int, default=5,
+                        help='Number of chars to create char-n-gram shingles from.')
+    parser.add_argument('--max-workers', type=int, default=None,
+                        help='Maximum number of CPU workers to use.')
     args = parser.parse_args()
+
+    if args.max_workers is None:
+        args.max_workers = multiprocessing.cpu_count()
 
     print('finding possible duplicate content ...')
 
@@ -228,7 +235,7 @@ if __name__ == '__main__':
     seeds = np.random.randint(0, 1e6, size=args.num_seeds)
 
     # initialize minhash and lsh cache
-    hasher = minhash.MinHasher(seeds=seeds, char_ngram=5, hashbytes=4)
+    hasher = minhash.MinHasher(seeds=seeds, char_ngram=args.char_n_gram, hashbytes=4)
     lshcache = cache.Cache(num_bands=args.num_bands, hasher=hasher)
 
     url_doc = {}
@@ -265,16 +272,35 @@ if __name__ == '__main__':
                 flush=True)
 
             # compute fingerprints in parallel
-            num_workers = 40
-            pool = multiprocessing.Pool(num_workers)
+            # num_workers = 40
+            pool = multiprocessing.Pool(args.max_workers)
             fin = open(input_file, 'r', encoding='utf-8')
 
             compute_fingerprint_partial = partial(compute_fingerprint, key=key)
             compute_fingerprint_iter = pool.imap(compute_fingerprint_partial,
                                                     fin, 512)
+
             # traverse all the texts and add fingerprints
             for url, text, fingerprint, flag in compute_fingerprint_iter:
                 counter += 1
+                if counter % 1000000 == 0:
+                    print("Size of url_doc (MB)", sys.getsizeof(url_doc) // 1000000)
+                    print("Size of lshcache (MB)", sys.getsizeof(lshcache) // 1000000)
+                    print("Size of lshcache.bins (MB)", sys.getsizeof(lshcache.bins) // 1000000)
+                    print("Size of lshcache.bins sum (MB)", sum([sys.getsizeof(b) for b in lshcache.bins]) // 1000000)
+                    my_deep_sum = 0
+                    for b in lshcache.bins:
+                        for s_k, s_v in b.items():
+                            my_deep_sum += sys.getsizeof(s_k) + sys.getsizeof(s_v)
+                    print("Size of lshcache.bins sum deeper (MB)", my_deep_sum // 1000000)
+                    print("Size of lshcache.fingerprints (MB)", sys.getsizeof(lshcache.fingerprints) // 1000000)
+                    fp_sum = 0
+                    num_fps = len(lshcache.fingerprints.keys())
+                    for k, v in lshcache.fingerprints.items():
+                        fp_sum += sys.getsizeof(k) + sys.getsizeof(k)
+                    print("Size of lshcache.fingerprints sum (MB)", fp_sum // 1000000)
+                    print(f"num_fps({num_fps}) * 4 = {num_fps * 4 // 1000000}MB")
+
                 if flag:
                     url_doc[url] = text
                     lshcache.add_fingerprint(fingerprint, url)

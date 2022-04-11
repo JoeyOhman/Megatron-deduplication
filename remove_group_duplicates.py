@@ -46,7 +46,7 @@ if __name__ == '__main__':
                     myjson = json.loads(line)
                     url = myjson['url']
                     if url in urls:
-                        print('removing', myjson)
+                        # print('removing', myjson)
                         removed_docs += 1
                         removed_chars += len(myjson['text'])
                         continue
