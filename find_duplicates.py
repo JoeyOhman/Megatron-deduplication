@@ -24,12 +24,31 @@ import time
 import pickle
 import sys
 import os
+import psutil
+from numba import jit
+
+max_ram_usage = 0
+
+
+def get_current_ram_usage():
+    global max_ram_usage
+    current_process = psutil.Process(os.getpid())
+    current_ram_usage = current_process.memory_full_info().uss
+    for child in current_process.children(recursive=True):
+        current_ram_usage += child.memory_full_info().rss
+    max_ram_usage = max(current_ram_usage, max_ram_usage)
+    print(f"CURRENT RAM USAGE: {current_ram_usage // 1000000}, MAX RAM USAGE: {max_ram_usage // 1000000}MB")
+
 
 # This function is adapted from:
 #   https://github.com/mattilyra/LSH/blob/master/examples/Introduction.ipynb
-def shingles(text, char_ngram):
-    return set(text[head:head + char_ngram]
-               for head in range(0, len(text) - char_ngram))
+# @jit(nopython=True)
+def shingles(text: str, char_ngram: int):
+    return set(text[head:head + char_ngram] for head in range(0, len(text) - char_ngram))
+    # my_set = set()
+    # for head in range(0, len(text) - char_ngram):
+    #     my_set.add(text[head:head + char_ngram])
+    # return my_set
 
 
 # This function is adapted from:
@@ -65,8 +84,7 @@ def url_pairs_to_remove(args, bucket_urls, url_doc):
     deduped_local, counter_local = 0, 0
     iteration = 0
     while len(bucket_urls) > 1:
-        if args.heuristic_iter != -1 and \
-            iteration == args.heuristic_iter:
+        if args.heuristic_iter != -1 and iteration == args.heuristic_iter:
             break
 
         items = list(bucket_urls)
@@ -138,7 +156,7 @@ def find_pair_urls_parallel(args, lshcache, url_doc):
     # compute jaccards of buckets in bin in parallel (parallelism
     # limited to # of bins)
     num_bins = len(lshcache.bins)
-    pool = multiprocessing.Pool(min(num_bins, args.max_workers))
+    pool = multiprocessing.Pool(min(num_bins, args.max_workers_jaccard))
     compute_jaccard_partial = partial(compute_jaccard, num_bins=num_bins, \
         start_time_local=start_time)
     # don't need to pass args and url_doc as they are already shared
@@ -146,7 +164,9 @@ def find_pair_urls_parallel(args, lshcache, url_doc):
 
     print("multiprocessing init took {:.2f}".format(time.time() - start_time),\
         flush=True)
+    counter_ram = 0
     for remove_urls_list, deduped_local, counter_local in compute_jaccard_iter:
+        get_current_ram_usage()
         deduped += deduped_local
         counter += counter_local
         write_remove_urls_list(remove_urls_list, f_out)
@@ -221,12 +241,15 @@ if __name__ == '__main__':
                        help='Use this to process large number of documents.')
     parser.add_argument('--char-n-gram', type=int, default=5,
                         help='Number of chars to create char-n-gram shingles from.')
-    parser.add_argument('--max-workers', type=int, default=None,
-                        help='Maximum number of CPU workers to use.')
+    parser.add_argument('--max-workers-fingerprints', type=int, default=None,
+                        help='Maximum number of CPU workers to use for fingerprints (not so RAM intensive and '
+                             'scales well).')
+    parser.add_argument('--max-workers-jaccard', type=int, default=None,
+                        help='Maximum number of CPU workers to use for jaccard (scales well, but scales RAM linearly!)')
     args = parser.parse_args()
 
-    if args.max_workers is None:
-        args.max_workers = multiprocessing.cpu_count()
+    assert args.max_workers_fingerprints is not None
+    assert args.max_workers_jaccard is not None
 
     print('finding possible duplicate content ...')
 
@@ -273,7 +296,7 @@ if __name__ == '__main__':
 
             # compute fingerprints in parallel
             # num_workers = 40
-            pool = multiprocessing.Pool(args.max_workers)
+            pool = multiprocessing.Pool(args.max_workers_fingerprints)
             fin = open(input_file, 'r', encoding='utf-8')
 
             compute_fingerprint_partial = partial(compute_fingerprint, key=key)
@@ -283,7 +306,9 @@ if __name__ == '__main__':
             # traverse all the texts and add fingerprints
             for url, text, fingerprint, flag in compute_fingerprint_iter:
                 counter += 1
-                if counter % 1000000 == 0:
+                if counter % 5000 == 0:
+                    get_current_ram_usage()
+                if counter % 10000 == 0:
                     print("Size of url_doc (MB)", sys.getsizeof(url_doc) // 1000000)
                     print("Size of lshcache (MB)", sys.getsizeof(lshcache) // 1000000)
                     print("Size of lshcache.bins (MB)", sys.getsizeof(lshcache.bins) // 1000000)

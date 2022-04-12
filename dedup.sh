@@ -17,7 +17,7 @@ DATA_OUT_DIR="data_out"
 # 0.6, 5 => 189.8MB -> MB,
 # 0.6, 7 => 189.8MB -> MB,
 
-JACCARD_THRESHOLD=0.6
+JACCARD_THRESHOLD=0.8
 CHAR_N_GRAM=7
 IDENTIFIER_KEY="url"
 IDENTIFIED_DUPS_FILE="identified_dups.jsonl"
@@ -56,7 +56,7 @@ done
 # num-bands 10, num-seeds 100 => 1400MB RAM, 5.3s, => 9.0MB => 8.8MB
 
 
-# icelandic reddit, chars=7, jac_sim=0.6, 5 workers
+# icelandic reddit, chars=7, jac_sim=0.6, 5 workers (0.22M docs)
 # num-bands 2, num-seeds 10 => 1600MB RAM, 31s, 193.2MB => 170MB
 # num-bands 5, num-seeds 10 => ~3000MB RAM, >60m, 193.2MB => ?
 # num-bands 10, num-seeds 10 => 3700MB RAM, >60m, 193.2MB => ?
@@ -66,24 +66,34 @@ done
 # num-bands 4, num-seeds 12 => 3500MB RAM, 1m1s, 193.2MB => 158MB
 # num-bands 6, num-seeds 12 => 4500MB RAM, , 193.2MB =>
 
+# opus all, 200MB (1.34M docs)
+# num-bands 4, num-seeds 12, jaccard-workers 2: 1m28s, 7GB RAM, 189.8MB => 169.7MB
+# num-bands 4, num-seeds 12, jaccard-workers 4: 1m18s, 10GB RAM, 189.8MB => 169.7MB
+# num-bands 6, num-seeds 12, jaccard-workers 6: 4m39s, 14GB RAM, 189.8MB => 167.7MB
+
+# num-bands 4, num-seeds 20, jaccard-workers 2: 1m17s, 7GB RAM, 189.8MB => 172.8MB
+# num-bands 5, num-seeds 20, jaccard-workers 2: 1m30s, 8GB RAM, 189.8MB => 170.3MB
+# num-bands 10, num-seeds 20, jaccard-workers 2: 13m11s, 10GB RAM, 189.8MB => 167.3MB
+
 # Find duplicates, num_bands does not affect ram usage except that is allows for more parallelism, that then linearly
 # increases ram usage per worker
 # More seeds heavily increase RAM, but is often faster since it means more hashes/bin => less collisions & Jaccard sims
 python find_duplicates.py --inputs $in_files_str_arg --output $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE \
-        --heuristic-iter -1 --num-bands 4 --char-n-gram $CHAR_N_GRAM --num-seeds 12 \
-        --max-workers 5
+        --heuristic-iter -1 --num-bands 2 --char-n-gram $CHAR_N_GRAM --num-seeds 10 \
+        --max-workers-fingerprints 1 --max-workers-jaccard 1 --jaccard-parallel
 # --jaccard-parallel
+
 # Group to decide what to remove
 python group_duplicate_url.py  $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE $DATA_OUT_DIR/$SIMILAR_URL_FILE $JACCARD_THRESHOLD
 
 ### DEBUGGING ###
 # Print similar groups from which only 1 is kept
-in_files_str_arg_debug=""
-for file_name in "${in_files_arr[@]}"; do
-   in_files_str_arg_debug="$in_files_str_arg_debug $DATA_OUT_DIR/added_ids/$file_name"
-done
-python debug_print_groups.py --in_files_added_ids $in_files_str_arg_debug --in_file_groups $DATA_OUT_DIR/$SIMILAR_URL_FILE --id_key_name $IDENTIFIER_KEY \
-          > $DATA_OUT_DIR/duplicate_texts.txt
+# in_files_str_arg_debug=""
+# for file_name in "${in_files_arr[@]}"; do
+#    in_files_str_arg_debug="$in_files_str_arg_debug $DATA_OUT_DIR/added_ids/$file_name"
+# done
+# python debug_print_groups.py --in_files_added_ids $in_files_str_arg_debug --in_file_groups $DATA_OUT_DIR/$SIMILAR_URL_FILE --id_key_name $IDENTIFIER_KEY \
+#           > $DATA_OUT_DIR/duplicate_texts.txt
 ### END DEBUGGING ###
 
 # Remove and create deduplicated files

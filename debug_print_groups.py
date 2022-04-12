@@ -1,5 +1,44 @@
 import argparse
 import json
+import numpy as np
+from nltk.translate.bleu_score import sentence_bleu
+from nltk.translate.bleu_score import SmoothingFunction
+from multiprocessing import Pool
+import spacy
+
+nlp = spacy.load('en_core_web_sm')
+
+
+def calcBleu(reference, candidate, weights):
+    return sentence_bleu(reference, candidate, weights=weights, smoothing_function=SmoothingFunction().method1)
+
+
+def calculateSelfBLEU(texts, ngram=5):
+    if len(texts) == 1:
+        return 0
+
+    spacyTexts = list(nlp.pipe(texts))
+    textsSplits = np.array([[token.text for token in t] for t in spacyTexts], dtype=object)
+
+    # textsSplits = np.array([[token.text for token in nlp(t)] for t in texts], dtype=object)
+    arange = np.arange(len(textsSplits))
+    weights = tuple((1. / ngram for _ in range(ngram)))
+
+    # pool = Pool(2)
+    bleus = list()
+    for idx, candidate in enumerate(textsSplits):
+        reference = textsSplits[arange != idx].tolist()
+        # bleu = sentence_bleu(reference, candidate, weights=weights, smoothing_function=SmoothingFunction().method1)
+        # bleus.append(pool.apply_async(calcBleu, args=(reference, candidate, weights)))
+        bleus.append(calcBleu(reference, candidate, weights))
+
+    # for idx, b in enumerate(bleus):
+    #     bleus[idx] = b.get()
+
+    # pool.close()
+    # pool.join()
+
+    return np.mean(bleus)
 
 
 def main(in_files_added_ids, in_file_groups, id_key_name):
@@ -21,14 +60,40 @@ def main(in_files_added_ids, in_file_groups, id_key_name):
     json_dicts_groups: list[dict] = [json.loads(line) for line in json_lines]
     keys_grouped = [list(group_dict.values())[0] for group_dict in json_dicts_groups]
 
-    print("\n\n### Printing duplicate groups from which only one sample is kept:")
+    # Calculate self-bleus in parallel
+    print("Calculating Self-BLEUs")
+    pool = Pool(8)
+    grouped_tuples = []
+    sbs = []
     for i, keys in enumerate(keys_grouped):
+        texts = [json_dicts_added_ids_dict[key] for key in keys]
+        # sb = calculateSelfBLEU(texts)
+        sbs.append(pool.apply_async(calculateSelfBLEU, args=(texts,)))
+        grouped_tuples.append([i, texts])
+
+    for idx, sb in enumerate(sbs):
+        sbs[idx] = sb.get()
+
+    pool.close()
+    pool.join()
+    print("Self-BLEUs done!")
+
+    for idx, tup in enumerate(grouped_tuples):
+        tup.append(sbs[idx])
+
+    grouped_tuples = sorted(grouped_tuples, key=lambda x: x[-1])
+
+    print("\n\n### Printing duplicate groups from which only one sample is kept:")
+    # for i, keys in enumerate(keys_grouped):
+    for tup in grouped_tuples:
+        i, texts, sb = tup
         print("\n\n")
-        print(f"\tGroup {i}:")
+        print(f"\tGroup {i}, group size={len(texts)}, sb={sb}:")
         print("*" * 100)
         print("-" * 90)
-        for key in keys:
-            print(json_dicts_added_ids_dict[key])
+        for t in texts:
+            # print(json_dicts_added_ids_dict[key])
+            print(t)
             print("-" * 90)
         print("*" * 100)
 
