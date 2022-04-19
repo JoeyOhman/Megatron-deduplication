@@ -83,10 +83,14 @@ done
 # increases ram usage per worker
 # More seeds heavily increase RAM, but is often faster since it means more hashes/bin => less collisions & Jaccard sims
 python find_duplicates.py --inputs $in_files_str_arg --output $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE \
-        --heuristic-iter -1 --num-bands 2 --char-n-gram $CHAR_N_GRAM --num-seeds 10 \
-        --max-workers-fingerprints 12 --max-workers-jaccard 4
+        --heuristic-iter -1 --num-bands 4 --char-n-gram $CHAR_N_GRAM --num-seeds 12 \
+        --max-workers-fingerprints 12 --max-workers-jaccard 4 --seed 1234
 # --jaccard-parallel
 # 19.5s, 14954 removed
+# reddit_is, multiple dedups with different seeds: 174.2 -> 158.4 -> 156.9 -> 156.4 -> 156.2
+# reddit_no, multiple dedups with different seeds: 714.4 -> 619.5 -> 613.8 -> 611.9
+
+# reddit_is, one heavier dedup: 174.2 -> 156.3
 
 # Group to decide what to remove
 python group_duplicate_url.py  $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE $DATA_OUT_DIR/$SIMILAR_URL_FILE $JACCARD_THRESHOLD
