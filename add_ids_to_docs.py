@@ -21,10 +21,18 @@ def _read_file(file_name, in_queue):
 
 
 def _process_line(work_func, in_queue, out_queue):
+    num_removed = 0
+    num_total = 0
     for line in iter(in_queue.get, sentinel):
-        processed_line = work_func(line)
-        out_queue.put(processed_line)
+        num_total += 1
+        json_obj = json.loads(line.strip())
+        if len(json_obj["text"].split(" ")) >= 70:
+            processed_line = work_func(line)
+            out_queue.put(processed_line)
+        else:
+            num_removed += 1
 
+    print(f"Num total={num_total}, Num removed={num_removed}")
     out_queue.put(sentinel)
 
 

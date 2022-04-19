@@ -24,6 +24,7 @@ if __name__ == '__main__':
     url_filename = sys.argv[1]
     data_filename = sys.argv[2]
     output_filename = sys.argv[3]
+    identifier_key = sys.argv[4]
 
     urls = set()
     with open(url_filename, 'r') as f:
@@ -44,7 +45,8 @@ if __name__ == '__main__':
             for line in fin:
                 try:
                     myjson = json.loads(line)
-                    url = myjson['url']
+                    # url = myjson['url']
+                    url = myjson[identifier_key]
                     if url in urls:
                         # print('removing', myjson)
                         removed_docs += 1

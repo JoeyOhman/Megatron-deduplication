@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Each document must have a unique value in this key. Add faked ids with ./add_fake_ids.sh if you need
+IDENTIFIER_KEY="doc_id"
+
 # Loads all .jsonl files in DATA_IN_DIR, writes intermediate files to DATA_OUT_DIR, and deduplicated files to DATA_OUT_DIR/deduplicated/
 DATA_IN_DIR="data_in"
 DATA_OUT_DIR="data_out"
@@ -19,16 +22,16 @@ DATA_OUT_DIR="data_out"
 
 JACCARD_THRESHOLD=0.8
 CHAR_N_GRAM=7
-IDENTIFIER_KEY="url"
+# IDENTIFIER_KEY="url"
 IDENTIFIED_DUPS_FILE="identified_dups.jsonl"
 SIMILAR_URL_FILE="similar_urls.jsonl"
 
 # Create dirs and clean up from last run
 mkdir -p $DATA_OUT_DIR
 rm -rf $DATA_OUT_DIR/*
-mkdir -p $DATA_OUT_DIR/added_ids
+# mkdir -p $DATA_OUT_DIR/added_ids
 mkdir -p $DATA_OUT_DIR/deduplicated
-mkdir -p $DATA_OUT_DIR/removed_ids
+# mkdir -p $DATA_OUT_DIR/removed_ids
 
 # Find all input data files
 work_dir=$(pwd)
@@ -37,14 +40,15 @@ in_files_arr=(*.jsonl)
 cd $work_dir
 
 # Add unique identifiers to all documents, existing urls/ids are kept
-for file_name in "${in_files_arr[@]}"; do
-  python add_ids_to_docs.py --in_file $DATA_IN_DIR/$file_name --out_file $DATA_OUT_DIR/added_ids/$file_name --id_key_name $IDENTIFIER_KEY
-done
+# echo "Adding temporary unique identifiers to all documents.."
+# for file_name in "${in_files_arr[@]}"; do
+#   python add_ids_to_docs.py --in_file $DATA_IN_DIR/$file_name --out_file $DATA_OUT_DIR/added_ids/$file_name --id_key_name $IDENTIFIER_KEY
+# done
 
 # Create input files argument
 in_files_str_arg=""
 for file_name in "${in_files_arr[@]}"; do
-   in_files_str_arg="$in_files_str_arg $DATA_OUT_DIR/added_ids/$file_name $IDENTIFIER_KEY"
+   in_files_str_arg="$in_files_str_arg $DATA_IN_DIR/$file_name $IDENTIFIER_KEY"
 done
 
 
@@ -80,8 +84,9 @@ done
 # More seeds heavily increase RAM, but is often faster since it means more hashes/bin => less collisions & Jaccard sims
 python find_duplicates.py --inputs $in_files_str_arg --output $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE \
         --heuristic-iter -1 --num-bands 2 --char-n-gram $CHAR_N_GRAM --num-seeds 10 \
-        --max-workers-fingerprints 1 --max-workers-jaccard 1 --jaccard-parallel
+        --max-workers-fingerprints 12 --max-workers-jaccard 4
 # --jaccard-parallel
+# 19.5s, 14954 removed
 
 # Group to decide what to remove
 python group_duplicate_url.py  $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE $DATA_OUT_DIR/$SIMILAR_URL_FILE $JACCARD_THRESHOLD
@@ -98,15 +103,19 @@ python group_duplicate_url.py  $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE $DATA_OUT_DIR
 
 # Remove and create deduplicated files
 for file_name in "${in_files_arr[@]}"; do
-   python remove_group_duplicates.py $DATA_OUT_DIR/$SIMILAR_URL_FILE $DATA_OUT_DIR/added_ids/$file_name $DATA_OUT_DIR/deduplicated/${file_name}
+   python remove_group_duplicates.py $DATA_OUT_DIR/$SIMILAR_URL_FILE $DATA_IN_DIR/$file_name $DATA_OUT_DIR/deduplicated/${file_name} $IDENTIFIER_KEY
 done
 
-rm -rf $DATA_OUT_DIR/added_ids
+# echo "Removing added_ids copy of data.."
+# rm -rf $DATA_OUT_DIR/added_ids
 
+# echo "Removing temporary unique identifiers from all documents.."
 # Remove unique identifiers from all documents, existing urls/ids are kept
-for file_name in "${in_files_arr[@]}"; do
-  python add_ids_to_docs.py --in_file $DATA_OUT_DIR/deduplicated/$file_name --out_file $DATA_OUT_DIR/removed_ids/$file_name --id_key_name $IDENTIFIER_KEY --remove
-done
+# for file_name in "${in_files_arr[@]}"; do
+#   python add_ids_to_docs.py --in_file $DATA_OUT_DIR/deduplicated/$file_name --out_file $DATA_OUT_DIR/removed_ids/$file_name --id_key_name $IDENTIFIER_KEY --remove
+# done
 
-rm -rf $DATA_OUT_DIR/deduplicated
-mv $DATA_OUT_DIR/removed_ids $DATA_OUT_DIR/finished_deduplication
+# echo "Removing deduplicated copy of data with added_ids"
+# rm -rf $DATA_OUT_DIR/deduplicated
+# mv $DATA_OUT_DIR/removed_ids $DATA_OUT_DIR/finished_deduplication
+echo "Final data in ${DATA_OUT_DIR}/deduplicated directory!"

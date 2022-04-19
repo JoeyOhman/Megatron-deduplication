@@ -25,7 +25,7 @@ import pickle
 import sys
 import os
 import psutil
-from numba import jit
+# from numba import jit
 
 max_ram_usage = 0
 
@@ -67,6 +67,7 @@ def jaccard(set_a, set_b, args):
     else:
         return len(intersection) / len(union)
 
+
 def compute_fingerprint(line, key):
     try:
         myjson = json.loads(line)
@@ -79,6 +80,7 @@ def compute_fingerprint(line, key):
 
     return url, text, fingerprint, True
 
+
 def url_pairs_to_remove(args, bucket_urls, url_doc):
     remove_urls_list = []
     deduped_local, counter_local = 0, 0
@@ -87,10 +89,11 @@ def url_pairs_to_remove(args, bucket_urls, url_doc):
         if args.heuristic_iter != -1 and iteration == args.heuristic_iter:
             break
 
+        # print(f"iteration={iteration}, len(bucket_urls)={len(bucket_urls)}")
         items = list(bucket_urls)
         remove_urls = []
         main_url = items[np.random.randint(0, len(items))]
-        main_dhingles = shingles(url_doc[main_url], args.char_n_gram)
+        main_shingles = shingles(url_doc[main_url], args.char_n_gram)
 
         for i in range(0, len(items)):
             counter_local += 1
@@ -99,7 +102,7 @@ def url_pairs_to_remove(args, bucket_urls, url_doc):
                 continue
             other_shingles = shingles(url_doc[other_url], args.char_n_gram)
             try:
-                jaccard_sim = jaccard(main_dhingles, other_shingles, args)
+                jaccard_sim = jaccard(main_shingles, other_shingles, args)
             except Exception as e:
                 print('Error:', e)
                 jaccard_sim = 0.0
@@ -115,12 +118,14 @@ def url_pairs_to_remove(args, bucket_urls, url_doc):
         iteration += 1
     return remove_urls_list, deduped_local, counter_local
 
+
 def write_remove_urls_list(remove_urls_list, f_out):
     if len(remove_urls_list) > 0:
         for each_url_remove in remove_urls_list:
             myjson = json.dumps(each_url_remove, ensure_ascii=False)
             f_out.write(myjson.encode('utf-8'))
             f_out.write('\n'.encode('utf-8'))
+
 
 def compute_jaccard(each_bin, num_bins, start_time_local):
 
@@ -130,16 +135,15 @@ def compute_jaccard(each_bin, num_bins, start_time_local):
     for bucket_id in each_bin:
         bucket_local += 1
         if os.getpid() % num_bins == 0 and bucket_local % 100000 == 0:
-            print("Counter {}, progress {:.2f} time {:.2f}".\
-                format(bucket_local, float(bucket_local)/float(len(each_bin)),\
-                time.time() - start_time_local), flush=True)
+            print("Counter {}, progress {:.2f} time {:.2f}".format(
+                bucket_local, float(bucket_local)/float(len(each_bin)), time.time() - start_time_local), flush=True)
 
+        # print("len(each_bin[bucket_id]):", len(each_bin[bucket_id]))
         if len(each_bin[bucket_id]) <= 1:
             continue
 
         bucket_urls = each_bin[bucket_id].copy()
-        remove_urls_list_sub, deduped_local_sub, counter_local_sub = \
-            url_pairs_to_remove(args, bucket_urls, url_doc)
+        remove_urls_list_sub, deduped_local_sub, counter_local_sub = url_pairs_to_remove(args, bucket_urls, url_doc)
 
         deduped_local += deduped_local_sub
         counter_local += counter_local_sub
@@ -147,6 +151,7 @@ def compute_jaccard(each_bin, num_bins, start_time_local):
             remove_urls_list.extend(remove_urls_list_sub)
 
     return remove_urls_list, deduped_local, counter_local
+
 
 def find_pair_urls_parallel(args, lshcache, url_doc):
     start_time = time.time()
@@ -157,29 +162,26 @@ def find_pair_urls_parallel(args, lshcache, url_doc):
     # limited to # of bins)
     num_bins = len(lshcache.bins)
     pool = multiprocessing.Pool(min(num_bins, args.max_workers_jaccard))
-    compute_jaccard_partial = partial(compute_jaccard, num_bins=num_bins, \
-        start_time_local=start_time)
+    compute_jaccard_partial = partial(compute_jaccard, num_bins=num_bins, start_time_local=start_time)
     # don't need to pass args and url_doc as they are already shared
     compute_jaccard_iter = pool.imap(compute_jaccard_partial, lshcache.bins)
 
-    print("multiprocessing init took {:.2f}".format(time.time() - start_time),\
-        flush=True)
-    counter_ram = 0
+    print("multiprocessing init took {:.2f}".format(time.time() - start_time), flush=True)
+
     for remove_urls_list, deduped_local, counter_local in compute_jaccard_iter:
-        get_current_ram_usage()
+        # get_current_ram_usage()
         deduped += deduped_local
         counter += counter_local
         write_remove_urls_list(remove_urls_list, f_out)
         print(' [write]> processed {} documents in {:.2f} '
-            'seoncds and deduped {} documents ...'.format(counter, time.time()\
-            - start_time, deduped), flush=True)
+              'seconds and deduped {} documents ...'.format(counter, time.time() - start_time, deduped), flush=True)
 
     pool.close()
     pool.join()
     f_out.close()
 
-    print(' Taken time for jaccard similariries {:.2f} seconds'.format(\
-        time.time() - start_time), flush=True)
+    print(' Taken time for jaccard similariries {:.2f} seconds'.format(time.time() - start_time), flush=True)
+
 
 def find_pair_urls_sequential(args, lshcache, url_doc):
     start_time = time.time()
@@ -191,22 +193,18 @@ def find_pair_urls_sequential(args, lshcache, url_doc):
                 continue
 
             bucket_urls = b[bucket_id].copy()
-            remove_urls_list_sub, deduped_local_sub, counter_local_sub = \
-                url_pairs_to_remove(args, bucket_urls, url_doc)
+            remove_urls_list_sub, deduped_local_sub, counter_local_sub = url_pairs_to_remove(args, bucket_urls, url_doc)
 
             deduped += deduped_local_sub
             counter += counter_local_sub
             write_remove_urls_list(remove_urls_list_sub, f_out)
             if counter % 10000 == 0:
-                print(' [write]> processed {} documents in {:.2f} '
-                    'seoncds and deduped {} documents ...'.
-                    format(counter, time.time() - start_time,
-                    deduped), flush=True)
+                print(' [write]> processed {} documents in {:.2f} seconds and deduped {} documents ...'.format(
+                    counter, time.time() - start_time, deduped), flush=True)
     f_out.close()
-    print(' [write]> processed {} documents in {:.2f} '
-        'seoncds and deduped {} documents ...'.
-        format(counter, time.time() - start_time,
-        deduped), flush=True)
+    print(' [write]> processed {} documents in {:.2f} seconds and deduped {} documents ...'.format(
+        counter, time.time() - start_time, deduped), flush=True)
+
 
 if __name__ == '__main__':
 
@@ -291,8 +289,7 @@ if __name__ == '__main__':
         print("Computing fingerprints", flush=True)
         assert len(args.inputs) % 2 == 0
         for input_file, key in zip(args.inputs[::2], args.inputs[1::2]):
-            print(' document processing {} with key {}'.format(input_file, key),
-                flush=True)
+            print(' document processing {} with key {}'.format(input_file, key), flush=True)
 
             # compute fingerprints in parallel
             # num_workers = 40
@@ -300,39 +297,20 @@ if __name__ == '__main__':
             fin = open(input_file, 'r', encoding='utf-8')
 
             compute_fingerprint_partial = partial(compute_fingerprint, key=key)
-            compute_fingerprint_iter = pool.imap(compute_fingerprint_partial,
-                                                    fin, 512)
+            compute_fingerprint_iter = pool.imap(compute_fingerprint_partial, fin, 512)
 
             # traverse all the texts and add fingerprints
             for url, text, fingerprint, flag in compute_fingerprint_iter:
                 counter += 1
-                if counter % 5000 == 0:
-                    get_current_ram_usage()
-                if counter % 10000 == 0:
-                    print("Size of url_doc (MB)", sys.getsizeof(url_doc) // 1000000)
-                    print("Size of lshcache (MB)", sys.getsizeof(lshcache) // 1000000)
-                    print("Size of lshcache.bins (MB)", sys.getsizeof(lshcache.bins) // 1000000)
-                    print("Size of lshcache.bins sum (MB)", sum([sys.getsizeof(b) for b in lshcache.bins]) // 1000000)
-                    my_deep_sum = 0
-                    for b in lshcache.bins:
-                        for s_k, s_v in b.items():
-                            my_deep_sum += sys.getsizeof(s_k) + sys.getsizeof(s_v)
-                    print("Size of lshcache.bins sum deeper (MB)", my_deep_sum // 1000000)
-                    print("Size of lshcache.fingerprints (MB)", sys.getsizeof(lshcache.fingerprints) // 1000000)
-                    fp_sum = 0
-                    num_fps = len(lshcache.fingerprints.keys())
-                    for k, v in lshcache.fingerprints.items():
-                        fp_sum += sys.getsizeof(k) + sys.getsizeof(k)
-                    print("Size of lshcache.fingerprints sum (MB)", fp_sum // 1000000)
-                    print(f"num_fps({num_fps}) * 4 = {num_fps * 4 // 1000000}MB")
+                # if counter % 5000 == 0:
+                    # get_current_ram_usage()
 
                 if flag:
                     url_doc[url] = text
                     lshcache.add_fingerprint(fingerprint, url)
                 if counter % 10000 == 0:
-                    print(' [read]> processed {} documents in {:.2f} '
-                        'seconds ...'.format(counter, time.time() - \
-                        start_time), flush=True)
+                    print(' [read]> processed {} documents in {:.2f} seconds ...'.format(
+                        counter, time.time() - start_time), flush=True)
 
             fin.close()
             pool.close()

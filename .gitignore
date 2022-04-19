@@ -131,3 +131,4 @@ dmypy.json
 .idea/
 LSH/
 data_out/
+data_in_not_used/
