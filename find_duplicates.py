@@ -190,6 +190,7 @@ def find_pair_urls_sequential(args, lshcache, url_doc):
     start_time = time.time()
     f_out = open(args.output, 'wb')
     deduped, counter = 0, 0
+    print_counter = 0
     for b in lshcache.bins:
         for bucket_id in b:
             if len(b[bucket_id]) <= 1:
@@ -200,8 +201,11 @@ def find_pair_urls_sequential(args, lshcache, url_doc):
 
             deduped += deduped_local_sub
             counter += counter_local_sub
+            print_counter += counter_local_sub
             write_remove_urls_list(remove_urls_list_sub, f_out)
-            if counter % 10000 == 0:
+            # if counter % 10000 == 0:
+            if print_counter >= 100000:
+                print_counter = 0
                 print(' [write]> processed {} documents in {:.2f} seconds and deduped {} documents ...'.format(
                     counter, time.time() - start_time, deduped), flush=True)
     f_out.close()
@@ -315,7 +319,7 @@ if __name__ == '__main__':
                 if flag:
                     url_doc[url] = text
                     lshcache.add_fingerprint(fingerprint, url)
-                if counter % 10000 == 0:
+                if counter % 200000 == 0:
                     print(' [read]> processed {} documents in {:.2f} seconds ...'.format(
                         counter, time.time() - start_time), flush=True)
 

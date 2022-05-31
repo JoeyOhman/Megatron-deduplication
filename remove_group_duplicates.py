@@ -73,7 +73,7 @@ if __name__ == '__main__':
                     fout.write(myjson.encode('utf-8'))
                     fout.write('\n'.encode('utf-8'))
                     written_docs += 1
-                    if written_docs % 10000 == 0:
+                    if written_docs % 200000 == 0:
                         print(' [PROCESSED] time (s): {:.2f} | written: {} '
                               '| removed: {} (char: {})'.format(
                                   time.time() - start_time,
