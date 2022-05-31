@@ -2,6 +2,7 @@ import argparse
 import json
 import threading
 import queue
+import hashlib
 from typing import Callable
 
 QUEUE_SIZE = 10000
@@ -12,6 +13,10 @@ ID_COUNTER = 0
 FILE_NAME = "None"
 KEY = "None"
 
+OPUS = True
+
+HASHES_IN_FILE = set()
+
 
 def _read_file(file_name, in_queue):
     with open(file_name, 'r') as f:
@@ -21,19 +26,25 @@ def _read_file(file_name, in_queue):
 
 
 def _process_line(work_func, in_queue, out_queue):
+
     num_removed = 0
     num_total = 0
     for line in iter(in_queue.get, sentinel):
-        num_total += 1
-        json_obj = json.loads(line.strip())
-        if len(json_obj["text"].split(" ")) >= 70:
-            processed_line = work_func(line)
-            out_queue.put(processed_line)
-        else:
-            num_removed += 1
+        processed_line, md5 = work_func(line)
 
-    print(f"Num total={num_total}, Num removed={num_removed}")
+        # MD5 DEDUPLICATION
+        num_total += 1
+        if md5 is not None:
+            if md5 in HASHES_IN_FILE:
+                num_removed += 1
+                continue
+            else:
+                HASHES_IN_FILE.add(md5)
+
+        out_queue.put(processed_line)
+
     out_queue.put(sentinel)
+    print(f"#Total={num_total}, #removed={num_removed}")
 
 
 def _write_file(file_name, out_queue):
@@ -67,14 +78,27 @@ def read_work_write(in_file: str, out_file: str, work_func: Callable[[str], str]
 # >>> EXAMPLE USAGE <<<
 def add_id(json_string):
     json_obj = json.loads(json_string)
+
+    if OPUS:
+        if "text" not in json_obj:
+            texts = []
+            # Iterate to always get same order of langs
+            for lang in ["en", "sv", "da", "is", "no", "nb", "nn", "ny"]:
+                if lang in json_obj:
+                    texts.append(json_obj[lang].strip(" \n"))
+            text = " ".join(texts)
+            json_obj["text"] = text
+
     if KEY in json_obj:
         return json_string.strip()
 
-    global ID_COUNTER
-    json_obj[KEY] = UNIQUE_PREFIX + "_" + FILE_NAME + "_" + str(ID_COUNTER)
-    ID_COUNTER += 1
+    # global ID_COUNTER
+    # json_obj[KEY] = UNIQUE_PREFIX + "_" + FILE_NAME + "_" + str(ID_COUNTER)
+    # ID_COUNTER += 1
+    md5 = hashlib.md5(json_obj["text"].lower().replace(" ", "").encode("utf8")).hexdigest()
+    json_obj[KEY] = md5
 
-    return json.dumps(json_obj, ensure_ascii=False)
+    return json.dumps(json_obj, ensure_ascii=False), md5
 
 
 def remove_id(json_string):
@@ -82,7 +106,13 @@ def remove_id(json_string):
     if UNIQUE_PREFIX + "_" + FILE_NAME + "_" in json_obj[KEY]:
         del json_obj[KEY]
 
-    return json.dumps(json_obj, ensure_ascii=False)
+    if OPUS:
+        if "text" in json_obj:
+            del json_obj["text"]
+        if KEY in json_obj:
+            del json_obj[KEY]
+
+    return json.dumps(json_obj, ensure_ascii=False), None
 
 
 def main():

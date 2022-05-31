@@ -1,8 +1,9 @@
 #!/bin/bash
 
-DATA_IN_DIR="data_in"
+# DATA_IN_DIR="data_in/is-sv"
+DATA_IN_DIR="data_in/en-is"
 DATA_OUT_TMP="data_in/added_ids"
-IDENTIFIER_KEY="doc_id"
+IDENTIFIER_KEY="md5"
 
 mkdir -p $DATA_OUT_TMP
 

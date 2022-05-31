@@ -71,6 +71,9 @@ def jaccard(set_a, set_b, args):
 def compute_fingerprint(line, key):
     try:
         myjson = json.loads(line)
+        if "keep" in myjson:
+            if myjson["keep"] == 0:
+                return None, None, None, False
         url = myjson[key]
         text = myjson['text']
         fingerprint = hasher.fingerprint(text)
@@ -247,7 +250,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     assert args.max_workers_fingerprints is not None
-    assert args.max_workers_jaccard is not None
+    if args.jaccard_parallel:
+        assert args.max_workers_jaccard is not None
 
     print('finding possible duplicate content ...')
 
@@ -293,6 +297,7 @@ if __name__ == '__main__':
 
             # compute fingerprints in parallel
             # num_workers = 40
+
             pool = multiprocessing.Pool(args.max_workers_fingerprints)
             fin = open(input_file, 'r', encoding='utf-8')
 
@@ -301,6 +306,8 @@ if __name__ == '__main__':
 
             # traverse all the texts and add fingerprints
             for url, text, fingerprint, flag in compute_fingerprint_iter:
+                if url is None and text is None:
+                    continue
                 counter += 1
                 # if counter % 5000 == 0:
                     # get_current_ram_usage()

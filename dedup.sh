@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Each document must have a unique value in this key. Add faked ids with ./add_fake_ids.sh if you need
-IDENTIFIER_KEY="doc_id"
+IDENTIFIER_KEY="md5"
 
 # Loads all .jsonl files in DATA_IN_DIR, writes intermediate files to DATA_OUT_DIR, and deduplicated files to DATA_OUT_DIR/deduplicated/
-DATA_IN_DIR="data_in"
+# DATA_IN_DIR="data_in/is-sv"
+DATA_IN_DIR="data_in/en-is"
 DATA_OUT_DIR="data_out"
 
 # Tests on one reddit language
@@ -20,8 +21,9 @@ DATA_OUT_DIR="data_out"
 # 0.6, 5 => 189.8MB -> MB,
 # 0.6, 7 => 189.8MB -> MB,
 
-JACCARD_THRESHOLD=0.8
-CHAR_N_GRAM=7
+# JACCARD_THRESHOLD=0.8
+JACCARD_THRESHOLD=0.5
+CHAR_N_GRAM=8
 # IDENTIFIER_KEY="url"
 IDENTIFIED_DUPS_FILE="identified_dups.jsonl"
 SIMILAR_URL_FILE="similar_urls.jsonl"
@@ -83,9 +85,9 @@ done
 # increases ram usage per worker
 # More seeds heavily increase RAM, but is often faster since it means more hashes/bin => less collisions & Jaccard sims
 python find_duplicates.py --inputs $in_files_str_arg --output $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE \
-        --heuristic-iter -1 --num-bands 4 --char-n-gram $CHAR_N_GRAM --num-seeds 12 \
-        --max-workers-fingerprints 12 --max-workers-jaccard 4 --seed 1234
-# --jaccard-parallel
+        --heuristic-iter -1 --num-bands 2 --char-n-gram $CHAR_N_GRAM --num-seeds 10 \
+        --max-workers-fingerprints 8 --seed 1234
+# --jaccard-parallel --max-workers-jaccard 4
 # 19.5s, 14954 removed
 # reddit_is, multiple dedups with different seeds: 174.2 -> 158.4 -> 156.9 -> 156.4 -> 156.2
 # reddit_no, multiple dedups with different seeds: 714.4 -> 619.5 -> 613.8 -> 611.9

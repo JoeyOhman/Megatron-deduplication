@@ -26,6 +26,8 @@ if __name__ == '__main__':
     output_filename = sys.argv[3]
     identifier_key = sys.argv[4]
 
+    # groups = {}
+
     urls = set()
     with open(url_filename, 'r') as f:
         for line in f:
@@ -33,7 +35,10 @@ if __name__ == '__main__':
             for key in myjson:
                 this_urls = myjson[key]
                 for i in range(1, len(this_urls)):
-                    urls.add(this_urls[i])
+                    doc_id = this_urls[i]
+                    urls.add(doc_id)
+                    # Keep track of similar docs
+                    # groups[doc_id] = this_urls[0:i] + this_urls[i + 1:]
     print('will be removing {} urls'.format(len(urls)), flush=True)
 
     written_docs = 0
@@ -44,7 +49,11 @@ if __name__ == '__main__':
         with open(data_filename, 'r') as fin:
             for line in fin:
                 try:
+                    keep = True
                     myjson = json.loads(line)
+                    if "keep" in myjson:
+                        if myjson["keep"] == 0:
+                            continue
                     # url = myjson['url']
                     url = myjson[identifier_key]
                     if url in urls:
@@ -52,6 +61,14 @@ if __name__ == '__main__':
                         removed_docs += 1
                         removed_chars += len(myjson['text'])
                         continue
+                        # keep = False
+
+                    # myjson["keep"] = 1 if keep else 0
+                    # if url in groups:
+                    #     myjson["fuzzy_duplicates"] = groups[url]
+                    # else:
+                    #     myjson["fuzzy_duplicates"] = []
+
                     myjson = json.dumps(myjson, ensure_ascii=False)
                     fout.write(myjson.encode('utf-8'))
                     fout.write('\n'.encode('utf-8'))

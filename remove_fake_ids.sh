@@ -2,7 +2,7 @@
 
 DATA_IN_DIR="data_out/deduplicated"
 DATA_OUT_TMP="data_out/removed_ids"
-IDENTIFIER_KEY="doc_id"
+IDENTIFIER_KEY="md5"
 
 mkdir -p $DATA_OUT_TMP
 
