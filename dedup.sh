@@ -5,34 +5,33 @@ IDENTIFIER_KEY="md5"
 
 # Loads all .jsonl files in DATA_IN_DIR, writes intermediate files to DATA_OUT_DIR, and deduplicated files to DATA_OUT_DIR/deduplicated/
 # DATA_IN_DIR="data_in/is-sv"
-DATA_IN_DIR="data_in/en-is"
-DATA_OUT_DIR="data_out"
+SUB_DIR="is-sv"
+# SUB_DIR="en-is"
 
-# Tests on one reddit language
-# 0.6, 7 => 193.2MB -> 155MB, 1m55s
-# 0.7, 7 => 193.2MB -> 164.9MB, 1m54s
-# 0.8, 7 => 193.2MB -> 173.4MB, 1m54s
-# 0.8, 8 => 193.2MB -> 173.7MB, 1m46s
-# 0.8, 9 => 193.2MB -> 173.8MB, 1m45s
-# 0.8, 10 => 193.2MB -> 173.9MB, 1m46s
+DATA_IN_DIR="/data/nordic_pile/jsonl_raw/opus_clean/${SUB_DIR}"
+DATA_OUT_DIR="/data/nordic_pile/jsonl_raw/opus_dedup/${SUB_DIR}"
 
-# Tests on opus file
-# 0.6, 7 => 189.8MB -> 189.8MB, 2m44s
-# 0.6, 5 => 189.8MB -> MB,
-# 0.6, 7 => 189.8MB -> MB,
+# These don't need to be changed
+DATA_ADDED_IDS_DIR="${DATA_OUT_DIR}/added_ids"
+DATA_DEDUPLICATED_DIR="${DATA_OUT_DIR}/deduplicated"
+DATA_REMOVED_IDS_DIR="${DATA_OUT_DIR}/removed_ids"
 
+IDENTIFIED_DUPS_FILE="${DATA_OUT_DIR}/identified_dups.jsonl"
+SIMILAR_URL_FILE="${DATA_OUT_DIR}/similar_urls.jsonl"
+
+# SETUP DEDUPLICATION PARAMETERS
 # JACCARD_THRESHOLD=0.8
 JACCARD_THRESHOLD=0.5
 CHAR_N_GRAM=8
-# IDENTIFIER_KEY="url"
-IDENTIFIED_DUPS_FILE="identified_dups.jsonl"
-SIMILAR_URL_FILE="similar_urls.jsonl"
+
 
 # Create dirs and clean up from last run
 mkdir -p $DATA_OUT_DIR
-rm -rf $DATA_OUT_DIR/*
-# mkdir -p $DATA_OUT_DIR/added_ids
-mkdir -p $DATA_OUT_DIR/deduplicated
+# rm -rf $DATA_OUT_DIR/*
+
+mkdir -p $DATA_ADDED_IDS_DIR
+mkdir -p $DATA_DEDUPLICATED_DIR
+mkdir -p $DATA_REMOVED_IDS_DIR
 # mkdir -p $DATA_OUT_DIR/removed_ids
 
 # Find all input data files
@@ -42,60 +41,29 @@ in_files_arr=(*.jsonl)
 cd $work_dir
 
 # Add unique identifiers to all documents, existing urls/ids are kept
-# echo "Adding temporary unique identifiers to all documents.."
-# for file_name in "${in_files_arr[@]}"; do
-#   python add_ids_to_docs.py --in_file $DATA_IN_DIR/$file_name --out_file $DATA_OUT_DIR/added_ids/$file_name --id_key_name $IDENTIFIER_KEY
-# done
+echo "Adding temporary unique identifiers to all documents.."
+for file_name in "${in_files_arr[@]}"; do
+  python add_ids_to_docs.py --in_file $DATA_IN_DIR/$file_name --out_file $DATA_ADDED_IDS_DIR/$file_name --id_key_name $IDENTIFIER_KEY
+done
 
 # Create input files argument
 in_files_str_arg=""
 for file_name in "${in_files_arr[@]}"; do
-   in_files_str_arg="$in_files_str_arg $DATA_IN_DIR/$file_name $IDENTIFIER_KEY"
+   in_files_str_arg="$in_files_str_arg $DATA_ADDED_IDS_DIR/$file_name $IDENTIFIER_KEY"
 done
-
-
-# 50K docs from opus, chars=7, jac_sim=0.6, 5 workers
-# num-bands 5, num-seeds 10 => 180MB RAM, 4.8s, 9.0MB => 8.7MB
-# num-bands 10, num-seeds 10 => 200MB RAM, 5m52s, 9.0MB => 8.7MB
-# num-bands 10, num-seeds 20 => 1200MB RAM, 7s, 9.0MB => 8.7MB
-# num-bands 20, num-seeds 20 => 1200MB RAM, 14m40s, 9.0MB => 8.7MB
-# num-bands 10, num-seeds 100 => 1400MB RAM, 5.3s, => 9.0MB => 8.8MB
-
-
-# icelandic reddit, chars=7, jac_sim=0.6, 5 workers (0.22M docs)
-# num-bands 2, num-seeds 10 => 1600MB RAM, 31s, 193.2MB => 170MB
-# num-bands 5, num-seeds 10 => ~3000MB RAM, >60m, 193.2MB => ?
-# num-bands 10, num-seeds 10 => 3700MB RAM, >60m, 193.2MB => ?
-
-# num-bands 2, num-seeds 12 => 1800MB RAM, 33s, 193.2MB => 172MB
-# num-bands 3, num-seeds 12 => 2400MB RAM, 43s, 193.2MB => 164MB
-# num-bands 4, num-seeds 12 => 3500MB RAM, 1m1s, 193.2MB => 158MB
-# num-bands 6, num-seeds 12 => 4500MB RAM, , 193.2MB =>
-
-# opus all, 200MB (1.34M docs)
-# num-bands 4, num-seeds 12, jaccard-workers 2: 1m28s, 7GB RAM, 189.8MB => 169.7MB
-# num-bands 4, num-seeds 12, jaccard-workers 4: 1m18s, 10GB RAM, 189.8MB => 169.7MB
-# num-bands 6, num-seeds 12, jaccard-workers 6: 4m39s, 14GB RAM, 189.8MB => 167.7MB
-
-# num-bands 4, num-seeds 20, jaccard-workers 2: 1m17s, 7GB RAM, 189.8MB => 172.8MB
-# num-bands 5, num-seeds 20, jaccard-workers 2: 1m30s, 8GB RAM, 189.8MB => 170.3MB
-# num-bands 10, num-seeds 20, jaccard-workers 2: 13m11s, 10GB RAM, 189.8MB => 167.3MB
 
 # Find duplicates, num_bands does not affect ram usage except that is allows for more parallelism, that then linearly
 # increases ram usage per worker
 # More seeds heavily increase RAM, but is often faster since it means more hashes/bin => less collisions & Jaccard sims
-python find_duplicates.py --inputs $in_files_str_arg --output $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE \
+python find_duplicates.py --inputs $in_files_str_arg --output $IDENTIFIED_DUPS_FILE \
         --heuristic-iter -1 --num-bands 2 --char-n-gram $CHAR_N_GRAM --num-seeds 10 \
         --max-workers-fingerprints 8 --seed 1234
 # --jaccard-parallel --max-workers-jaccard 4
-# 19.5s, 14954 removed
-# reddit_is, multiple dedups with different seeds: 174.2 -> 158.4 -> 156.9 -> 156.4 -> 156.2
-# reddit_no, multiple dedups with different seeds: 714.4 -> 619.5 -> 613.8 -> 611.9
 
 # reddit_is, one heavier dedup: 174.2 -> 156.3
 
 # Group to decide what to remove
-python group_duplicate_url.py  $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE $DATA_OUT_DIR/$SIMILAR_URL_FILE $JACCARD_THRESHOLD
+python group_duplicate_url.py  $IDENTIFIED_DUPS_FILE $SIMILAR_URL_FILE $JACCARD_THRESHOLD
 
 ### DEBUGGING ###
 # Print similar groups from which only 1 is kept
@@ -109,19 +77,19 @@ python group_duplicate_url.py  $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE $DATA_OUT_DIR
 
 # Remove and create deduplicated files
 for file_name in "${in_files_arr[@]}"; do
-   python remove_group_duplicates.py $DATA_OUT_DIR/$SIMILAR_URL_FILE $DATA_IN_DIR/$file_name $DATA_OUT_DIR/deduplicated/${file_name} $IDENTIFIER_KEY
+   python remove_group_duplicates.py $SIMILAR_URL_FILE $DATA_ADDED_IDS_DIR/$file_name $DATA_DEDUPLICATED_DIR/${file_name} $IDENTIFIER_KEY
 done
 
 # echo "Removing added_ids copy of data.."
 # rm -rf $DATA_OUT_DIR/added_ids
 
-# echo "Removing temporary unique identifiers from all documents.."
 # Remove unique identifiers from all documents, existing urls/ids are kept
-# for file_name in "${in_files_arr[@]}"; do
-#   python add_ids_to_docs.py --in_file $DATA_OUT_DIR/deduplicated/$file_name --out_file $DATA_OUT_DIR/removed_ids/$file_name --id_key_name $IDENTIFIER_KEY --remove
-# done
+echo "Removing temporary unique identifiers from all documents.."
+for file_name in "${in_files_arr[@]}"; do
+  python add_ids_to_docs.py --in_file $DATA_DEDUPLICATED_DIR/$file_name --out_file $DATA_REMOVED_IDS_DIR/$file_name --id_key_name $IDENTIFIER_KEY --remove
+done
 
 # echo "Removing deduplicated copy of data with added_ids"
 # rm -rf $DATA_OUT_DIR/deduplicated
 # mv $DATA_OUT_DIR/removed_ids $DATA_OUT_DIR/finished_deduplication
-echo "Final data in ${DATA_OUT_DIR}/deduplicated directory!"
+echo "Processed data in ${DATA_OUT_DIR} directory!"

@@ -85,7 +85,8 @@ def add_id(json_string):
             # Iterate to always get same order of langs
             for lang in ["en", "sv", "da", "is", "no", "nb", "nn", "ny"]:
                 if lang in json_obj:
-                    texts.append(json_obj[lang].strip(" \n"))
+                    json_obj[lang] = json_obj[lang].strip(" \n")
+                    texts.append(json_obj[lang])
             text = " ".join(texts)
             json_obj["text"] = text
 
