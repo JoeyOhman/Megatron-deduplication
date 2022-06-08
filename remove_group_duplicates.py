@@ -21,22 +21,23 @@ import sys
 
 if __name__ == '__main__':
 
-    url_filename = sys.argv[1]
+    id_filename = sys.argv[1]
     data_filename = sys.argv[2]
     output_filename = sys.argv[3]
     identifier_key = sys.argv[4]
 
-    urls = set()
-    with open(url_filename, 'r') as f:
+    # Set of ids that should be removed
+    ids_to_remove = set()
+    with open(id_filename, 'r') as f:
         for line in f:
             myjson = json.loads(line)
             for key in myjson:
-                this_urls = myjson[key]
-                for i in range(1, len(this_urls)):
-                    urls.add(this_urls[i])
-    print('will be removing {} urls'.format(len(urls)), flush=True)
+                this_ids = myjson[key]
+                for i in range(1, len(this_ids)):
+                    ids_to_remove.add(this_ids[i])
+    print('will be removing {} ids'.format(len(ids_to_remove)), flush=True)
 
-    written_docs = 0
+    kept_docs = 0
     removed_docs = 0
     removed_chars = 0
     start_time = time.time()
@@ -45,27 +46,31 @@ if __name__ == '__main__':
             for line in fin:
                 try:
                     myjson = json.loads(line)
-                    # url = myjson['url']
-                    url = myjson[identifier_key]
-                    if url in urls:
-                        # print('removing', myjson)
+                    id = myjson[identifier_key]
+                    if id in ids_to_remove:
                         removed_docs += 1
                         removed_chars += len(myjson['text'])
-                        continue
+                        if "keep" in myjson and "filters" in myjson:
+                            myjson["keep"] = 0
+                            myjson["filters"].append("fuzzy_dedup")
+                        else:
+                            continue
+                    else:
+                        kept_docs += 1
                     myjson = json.dumps(myjson, ensure_ascii=False)
                     fout.write(myjson.encode('utf-8'))
                     fout.write('\n'.encode('utf-8'))
-                    written_docs += 1
-                    if written_docs % 10000 == 0:
-                        print(' [PROCESSED] time (s): {:.2f} | written: {} '
+                    # kept_docs += 1
+                    if kept_docs % 10000 == 0:
+                        print(' [PROCESSED] time (s): {:.2f} | kept: {} '
                               '| removed: {} (char: {})'.format(
                                   time.time() - start_time,
-                                  written_docs, removed_docs, removed_chars))
+                                  kept_docs, removed_docs, removed_chars))
                 except Exception as e:
                     print('[SKIPPING]', line, e)
 
-    print(' [PROCESSED] time (s): {:.2f} | written: {} '
-          '| removed: {} (char: {})'.format(
+    print(' [PROCESSED] time (s): {:.2f} | kept: {} '
+          '| removed: {} (chars: {})'.format(
               time.time() - start_time,
-              written_docs, removed_docs, removed_chars))
+              kept_docs, removed_docs, removed_chars))
     print('done :-)')

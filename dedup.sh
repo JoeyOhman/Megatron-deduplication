@@ -1,125 +1,104 @@
 #!/bin/bash
 
-# Each document must have a unique value in this key. Add faked ids with ./add_fake_ids.sh if you need
-IDENTIFIER_KEY="doc_id"
+########################################################################
+########################## PARAMETER SETTINGS ##########################
+########################################################################
+# ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
+# ROOT_OUT="/data/nordic_pile/jsonl_train_format/deduplicated"
+ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_in"
+ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out"
 
-# Loads all .jsonl files in DATA_IN_DIR, writes intermediate files to DATA_OUT_DIR, and deduplicated files to DATA_OUT_DIR/deduplicated/
-DATA_IN_DIR="data_in"
-DATA_OUT_DIR="data_out"
+IDENTIFIED_DUPLICATES_FILE="$ROOT_OUT/identified_duplicates.jsonl"
+SIMILAR_ID_FILE="$ROOT_OUT/similar_documents.jsonl"
 
-# Tests on one reddit language
-# 0.6, 7 => 193.2MB -> 155MB, 1m55s
-# 0.7, 7 => 193.2MB -> 164.9MB, 1m54s
-# 0.8, 7 => 193.2MB -> 173.4MB, 1m54s
-# 0.8, 8 => 193.2MB -> 173.7MB, 1m46s
-# 0.8, 9 => 193.2MB -> 173.8MB, 1m45s
-# 0.8, 10 => 193.2MB -> 173.9MB, 1m46s
+# Each document must have a unique value in this key.
+IDENTIFIER_KEY="md5"
 
-# Tests on opus file
-# 0.6, 7 => 189.8MB -> 189.8MB, 2m44s
-# 0.6, 5 => 189.8MB -> MB,
-# 0.6, 7 => 189.8MB -> MB,
 
-JACCARD_THRESHOLD=0.8
-CHAR_N_GRAM=7
-# IDENTIFIER_KEY="url"
-IDENTIFIED_DUPS_FILE="identified_dups.jsonl"
-SIMILAR_URL_FILE="similar_urls.jsonl"
+# LSH-minhash settings
+CHAR_N_GRAM=10  #  Linked to from Nvidia Megatron Bootcamp: http://snap.stanford.edu/class/cs246-2012/slides/03-lsh.pdf
+JACCARD_THRESHOLD=0.5  # The Pile, looks sound after qualitative checks
+NUM_SEEDS=10  # The Pile #hashes
+NUM_BINS=2  # Empirically set, only options with 10 seeds is 1, 2, 5, or 10. 2 seems to give best results/cost
 
-# Create dirs and clean up from last run
-mkdir -p $DATA_OUT_DIR
-rm -rf $DATA_OUT_DIR/*
-# mkdir -p $DATA_OUT_DIR/added_ids
-mkdir -p $DATA_OUT_DIR/deduplicated
-# mkdir -p $DATA_OUT_DIR/removed_ids
+# Parallelization settings
+MAX_WORKERS_FINGERPRINTS=12
+MAX_WORKERS_JACCARD=1  # Extremely expensive in RAM
 
-# Find all input data files
-work_dir=$(pwd)
-cd $DATA_IN_DIR
-in_files_arr=(*.jsonl)
-cd $work_dir
 
-# Add unique identifiers to all documents, existing urls/ids are kept
-# echo "Adding temporary unique identifiers to all documents.."
-# for file_name in "${in_files_arr[@]}"; do
-#   python add_ids_to_docs.py --in_file $DATA_IN_DIR/$file_name --out_file $DATA_OUT_DIR/added_ids/$file_name --id_key_name $IDENTIFIER_KEY
-# done
+echo ""
+echo "ROOT_IN: ${ROOT_IN}"
+echo "ROOT_OUT: ${ROOT_OUT}"
 
+if [ ! -d "$ROOT_OUT" ]
+then
+    echo ""
+    echo "ERROR: Output directory $ROOT_OUT does not exist, please create it and add write permissions beforehand."
+    exit
+fi
+
+in_file_paths=$(find $ROOT_IN -name "*.jsonl")
+
+
+#####################################################################
+########################## FIND DUPLICATES ##########################
+#####################################################################
 # Create input files argument
 in_files_str_arg=""
-for file_name in "${in_files_arr[@]}"; do
-   in_files_str_arg="$in_files_str_arg $DATA_IN_DIR/$file_name $IDENTIFIER_KEY"
+for path_in_file in $in_file_paths; do
+  echo ""
+  echo $path_in_file
+
+  in_files_str_arg="$in_files_str_arg $path_in_file"
+
+done
+
+# Find duplicates: Creates hashes for all documents, and does jaccard similarity on all documents with hash collisions
+# Uses LSH minhash => approximate comparisons to avoid O(N^2) complexity
+python find_duplicates.py \
+          --inputs $in_files_str_arg \
+          --doc_id_key $IDENTIFIER_KEY \
+          --output $IDENTIFIED_DUPLICATES_FILE \
+          --heuristic_iter -1 \
+          --char_n_gram $CHAR_N_GRAM \
+          --jaccard_threshold $JACCARD_THRESHOLD \
+          --num_seeds $NUM_SEEDS \
+          --num_bands $NUM_BINS \
+          --max_workers_fingerprints $MAX_WORKERS_FINGERPRINTS \
+          --max_workers_jaccard $MAX_WORKERS_JACCARD \
+          --seed 1234
+
+
+######################################################################
+########################## GROUP DUPLICATES ##########################
+######################################################################
+# Groups documents that are similar
+python group_duplicate_url.py \
+        $IDENTIFIED_DUPLICATES_FILE \
+        $SIMILAR_ID_FILE \
+        $JACCARD_THRESHOLD
+
+
+################################################################################################
+########################## REMOVE DUPLICATES & WRITE OUTPUT DOCUMENTS ##########################
+################################################################################################
+# Iterate through all input files and remove all duplicates except one within duplicate groups
+# Writes output files in the same file structure as the input structure
+for path_in_file in $in_file_paths; do
+  # Replace ROOT_IN with ROOT_OUT
+  path_out_file="${path_in_file/"$ROOT_IN"/"$ROOT_OUT"}"
+
+  # Find output directory and create it
+  out_dir="$(dirname "${path_out_file}")"
+  mkdir -p $out_dir
+
+  # Remove duplicates and write output files
+  python remove_group_duplicates.py \
+          $SIMILAR_ID_FILE \
+          $path_in_file \
+          $path_out_file \
+          $IDENTIFIER_KEY
 done
 
 
-# 50K docs from opus, chars=7, jac_sim=0.6, 5 workers
-# num-bands 5, num-seeds 10 => 180MB RAM, 4.8s, 9.0MB => 8.7MB
-# num-bands 10, num-seeds 10 => 200MB RAM, 5m52s, 9.0MB => 8.7MB
-# num-bands 10, num-seeds 20 => 1200MB RAM, 7s, 9.0MB => 8.7MB
-# num-bands 20, num-seeds 20 => 1200MB RAM, 14m40s, 9.0MB => 8.7MB
-# num-bands 10, num-seeds 100 => 1400MB RAM, 5.3s, => 9.0MB => 8.8MB
-
-
-# icelandic reddit, chars=7, jac_sim=0.6, 5 workers (0.22M docs)
-# num-bands 2, num-seeds 10 => 1600MB RAM, 31s, 193.2MB => 170MB
-# num-bands 5, num-seeds 10 => ~3000MB RAM, >60m, 193.2MB => ?
-# num-bands 10, num-seeds 10 => 3700MB RAM, >60m, 193.2MB => ?
-
-# num-bands 2, num-seeds 12 => 1800MB RAM, 33s, 193.2MB => 172MB
-# num-bands 3, num-seeds 12 => 2400MB RAM, 43s, 193.2MB => 164MB
-# num-bands 4, num-seeds 12 => 3500MB RAM, 1m1s, 193.2MB => 158MB
-# num-bands 6, num-seeds 12 => 4500MB RAM, , 193.2MB =>
-
-# opus all, 200MB (1.34M docs)
-# num-bands 4, num-seeds 12, jaccard-workers 2: 1m28s, 7GB RAM, 189.8MB => 169.7MB
-# num-bands 4, num-seeds 12, jaccard-workers 4: 1m18s, 10GB RAM, 189.8MB => 169.7MB
-# num-bands 6, num-seeds 12, jaccard-workers 6: 4m39s, 14GB RAM, 189.8MB => 167.7MB
-
-# num-bands 4, num-seeds 20, jaccard-workers 2: 1m17s, 7GB RAM, 189.8MB => 172.8MB
-# num-bands 5, num-seeds 20, jaccard-workers 2: 1m30s, 8GB RAM, 189.8MB => 170.3MB
-# num-bands 10, num-seeds 20, jaccard-workers 2: 13m11s, 10GB RAM, 189.8MB => 167.3MB
-
-# Find duplicates, num_bands does not affect ram usage except that is allows for more parallelism, that then linearly
-# increases ram usage per worker
-# More seeds heavily increase RAM, but is often faster since it means more hashes/bin => less collisions & Jaccard sims
-python find_duplicates.py --inputs $in_files_str_arg --output $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE \
-        --heuristic-iter -1 --num-bands 4 --char-n-gram $CHAR_N_GRAM --num-seeds 12 \
-        --max-workers-fingerprints 12 --max-workers-jaccard 4 --seed 1234
-# --jaccard-parallel
-# 19.5s, 14954 removed
-# reddit_is, multiple dedups with different seeds: 174.2 -> 158.4 -> 156.9 -> 156.4 -> 156.2
-# reddit_no, multiple dedups with different seeds: 714.4 -> 619.5 -> 613.8 -> 611.9
-
-# reddit_is, one heavier dedup: 174.2 -> 156.3
-
-# Group to decide what to remove
-python group_duplicate_url.py  $DATA_OUT_DIR/$IDENTIFIED_DUPS_FILE $DATA_OUT_DIR/$SIMILAR_URL_FILE $JACCARD_THRESHOLD
-
-### DEBUGGING ###
-# Print similar groups from which only 1 is kept
-# in_files_str_arg_debug=""
-# for file_name in "${in_files_arr[@]}"; do
-#    in_files_str_arg_debug="$in_files_str_arg_debug $DATA_OUT_DIR/added_ids/$file_name"
-# done
-# python debug_print_groups.py --in_files_added_ids $in_files_str_arg_debug --in_file_groups $DATA_OUT_DIR/$SIMILAR_URL_FILE --id_key_name $IDENTIFIER_KEY \
-#           > $DATA_OUT_DIR/duplicate_texts.txt
-### END DEBUGGING ###
-
-# Remove and create deduplicated files
-for file_name in "${in_files_arr[@]}"; do
-   python remove_group_duplicates.py $DATA_OUT_DIR/$SIMILAR_URL_FILE $DATA_IN_DIR/$file_name $DATA_OUT_DIR/deduplicated/${file_name} $IDENTIFIER_KEY
-done
-
-# echo "Removing added_ids copy of data.."
-# rm -rf $DATA_OUT_DIR/added_ids
-
-# echo "Removing temporary unique identifiers from all documents.."
-# Remove unique identifiers from all documents, existing urls/ids are kept
-# for file_name in "${in_files_arr[@]}"; do
-#   python add_ids_to_docs.py --in_file $DATA_OUT_DIR/deduplicated/$file_name --out_file $DATA_OUT_DIR/removed_ids/$file_name --id_key_name $IDENTIFIER_KEY --remove
-# done
-
-# echo "Removing deduplicated copy of data with added_ids"
-# rm -rf $DATA_OUT_DIR/deduplicated
-# mv $DATA_OUT_DIR/removed_ids $DATA_OUT_DIR/finished_deduplication
-echo "Final data in ${DATA_OUT_DIR}/deduplicated directory!"
+echo "Final data in $ROOT_OUT!"
