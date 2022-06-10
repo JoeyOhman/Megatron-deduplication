@@ -38,6 +38,7 @@ if __name__ == '__main__':
     print('will be removing {} ids'.format(len(ids_to_remove)), flush=True)
 
     kept_docs = 0
+    kept_chars = 0
     removed_docs = 0
     removed_chars = 0
     start_time = time.time()
@@ -57,13 +58,14 @@ if __name__ == '__main__':
                             continue
                     else:
                         kept_docs += 1
+                        kept_chars += len(myjson['text'])
                     myjson = json.dumps(myjson, ensure_ascii=False)
                     fout.write(myjson.encode('utf-8'))
                     fout.write('\n'.encode('utf-8'))
                     # kept_docs += 1
-                    if kept_docs % 10000 == 0:
+                    if kept_docs % 100000 == 0:
                         print(' [PROCESSED] time (s): {:.2f} | kept: {} '
-                              '| removed: {} (char: {})'.format(
+                              '| removed: {} (chars: {})'.format(
                                   time.time() - start_time,
                                   kept_docs, removed_docs, removed_chars))
                 except Exception as e:
@@ -73,4 +75,7 @@ if __name__ == '__main__':
           '| removed: {} (chars: {})'.format(
               time.time() - start_time,
               kept_docs, removed_docs, removed_chars))
-    print('done :-)')
+
+    print(f"Done with {output_filename} :-)")
+    print(f"Removed {round(100 * removed_docs / (kept_docs + removed_docs), 2)}% of documents.")
+    print(f"Removed {round(100 * removed_chars / (kept_chars + removed_chars), 2)}% of characters.")

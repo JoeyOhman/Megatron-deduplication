@@ -33,9 +33,9 @@ max_ram_usage = 0
 def get_current_ram_usage():
     global max_ram_usage
     current_process = psutil.Process(os.getpid())
-    current_ram_usage = current_process.memory_full_info().uss
+    current_ram_usage = current_process.memory_full_info().pss
     for child in current_process.children(recursive=True):
-        current_ram_usage += child.memory_full_info().rss
+        current_ram_usage += child.memory_full_info().pss
     max_ram_usage = max(current_ram_usage, max_ram_usage)
     print(f"CURRENT RAM USAGE: {current_ram_usage // 1000000}, MAX RAM USAGE: {max_ram_usage // 1000000}MB")
 
@@ -170,6 +170,10 @@ def find_pair_ids_parallel(args, lshcache, id_doc):
 
     print("multiprocessing init took {:.2f}".format(time.time() - start_time), flush=True)
 
+    # for i in range(15):
+    #     time.sleep(2)
+    #     get_current_ram_usage()
+
     for remove_ids_list, deduped_local, counter_local in compute_jaccard_iter:
         # get_current_ram_usage()
         deduped += deduped_local
@@ -200,7 +204,7 @@ def find_pair_ids_sequential(args, lshcache, id_doc):
             deduped += deduped_local_sub
             counter += counter_local_sub
             write_remove_ids_list(remove_ids_list_sub, f_out)
-            if counter % 10000 == 0:
+            if counter % 100000 == 0:
                 print(' [write]> processed {} documents in {:.2f} seconds and deduped {} documents ...'.format(
                     counter, time.time() - start_time, deduped), flush=True)
     f_out.close()
@@ -209,8 +213,6 @@ def find_pair_ids_sequential(args, lshcache, id_doc):
 
 
 if __name__ == '__main__':
-
-    print('parsing the arguments ...')
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=1234,
@@ -248,8 +250,6 @@ if __name__ == '__main__':
     assert args.max_workers_jaccard is not None
     assert args.inputs is not None
 
-    print('finding possible duplicate content ...')
-
     # set seed and get an array of seeds of 100 integers
     np.random.seed(args.seed)
     seeds = np.random.randint(0, 1e6, size=args.num_seeds)
@@ -284,15 +284,13 @@ if __name__ == '__main__':
     counter = 0
     start_time = time.time()
 
-    # compute fingerprints of the inputs if any
-    # input file and the key to use as id
     # if args.inputs is not None:
     print("Computing fingerprints", flush=True)
     # assert len(args.inputs) % 2 == 0
     # for input_file, key in zip(args.inputs[::2], args.inputs[1::2]):
     key = args.doc_id_key
     for input_file in args.inputs:
-        print(' document processing {} with key {}'.format(input_file, key), flush=True)
+        print(' processing {} with key {}'.format(input_file, key), flush=True)
 
         # Compute fingerprints in parallel
         pool = multiprocessing.Pool(args.max_workers_fingerprints)
@@ -308,12 +306,12 @@ if __name__ == '__main__':
 
             counter += 1
             # if counter % 5000 == 0:
-                # get_current_ram_usage()
+            #     get_current_ram_usage()
 
             if flag:
                 id_doc[id] = text
                 lshcache.add_fingerprint(fingerprint, id)
-            if counter % 10000 == 0:
+            if counter % 100000 == 0:
                 print(' [read]> processed {} documents in {:.2f} seconds ...'.format(
                     counter, time.time() - start_time), flush=True)
 
@@ -331,13 +329,10 @@ if __name__ == '__main__':
             pickle.dump(url_doc, f_save)
     """
 
-    # compute jaccard index of the input texts and write to file if needed
+    # Compute Jaccard index of the input texts and write to file if needed
     if args.output is not None:
-        print("Compute jaccard similarity", flush=True)
+        print("Computing Jaccard similarity", flush=True)
         if args.max_workers_jaccard > 1:
             find_pair_ids_parallel(args, lshcache, id_doc)
         else:
             find_pair_ids_sequential(args, lshcache, id_doc)
-
-    print('done :-)')
- 

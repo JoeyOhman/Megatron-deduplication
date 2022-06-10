@@ -1,63 +1,72 @@
-The following steps show how to prepare training dataset to train the mode.
+# Fuzzy deduplication using LSH
 
-# Libraries to install
+**This repository is a modified version of https://github.com/NVIDIA/Megatron-LM/tree/main/tools/openwebtext**
 
-After cloning LSH-repo, set `USE_CYTHON` to `True` in its `setup.py`
+## Installing
+1. Clone this repository:
 
-```
-    pip install ftfy langdetect numpy torch pandas nltk sentencepiece boto3 tqdm regex bs4 newspaper3k htmlmin tldextract 
-    git clone https://github.com/mattilyra/LSH
-    cd LSH
-    python setup.py install
-``` 
+`git clone git@github.com:JoeyOhman/Megatron-deduplication.git`
 
-To deduplicate everything in `data_in` directory: `./dedup.sh`
+2. These packages may or may not be needed, this line comes from the original Megatron repo:
 
-# Download the dataset
+`pip install ftfy langdetect numpy torch pandas nltk sentencepiece boto3 tqdm regex bs4 newspaper3k htmlmin tldextract`
 
-1. Download the deduplicated URLs from [jcpeterson](https://mega.nz/#F!EZZD0YwJ!9_PlEQzdMVLaNdKv_ICNVQ!cc4RgQQZ)
-2. Remove blacklisted URLs.
-```
-python blacklist_urls.py <path to the dowloaded deduplicated URLs> <filename for clean urls. e.g. clean_urls.txt>
-```
-3. Download the content from the clean urls with [openwebtext's utilities](https://github.com/eukaryote31/openwebtext/blob/master/download.py). 
+3. Clone the LSH dependency:
 
-4. Merge the contents into one loose json file with 1 json per newline of the format `{'text': text, 'url': unique_url}`. It is important for the url to be unique.
+`git clone https://github.com/mattilyra/LSH`
 
-# Prepare the data for GPT training:
+4. Move into LSH directory:
 
-1. Perform ftfy, english detection and remove documents with less than 128 tokens. This step can be sharded and run on shards.
-```
-python cleanup_dataset.py <input data file> <output cleaned data filename>
-```
-Additional cleanup (e.g. remove documents less than 512 characters or dataset specific cleaning like stories, realnews datasets) can be done using `cleanup_fix_dataset.py`. More details can be found by running `python cleanup_fix_dataset.py --help`.
-2. Using LSH, find possible duplicates and store then in a file for later processing. The code supports saving and loading fingerprints for recurrent deduplications, and is also multithreaded for faster processing. More details are can be found by `python find_duplicate.py --help`.
-```
-python find_duplicates.py --inputs <pairlist list of input cleaned data files and keys, e.g. cc.json cc_id news.json news_id> --output <output possible duplicate urls filename>
-```
-3. Based on similarity measure defind inside function `is_similar` (default: 0.9), group urls that are similar. Basically, for each group, only one url we should keep and remove the rest.
-```
-python group_duplicate_urls.py <possible duplicate urls file> <output file containing similar urls>
-```
-4. Remove similar documents that were detected in the last step.
-```
-python remove_group_duplicates.py <file containing simialr documents> <cleaned data file> <outputfile containing deduplicate data>
-```
+`cd LSH`
 
-5. Shuffle the dataset.
-```
-shuf <cleaned deduped data file> -o train_data.json
-```
+5. Set `USE_CYTHON` to `True` in `LSH/setup.py`
 
-# Deduplicating ngrams
+6. Install the LSH dependency:
 
-To deduplicate the downstream tasks (e.g. lambada, squad) from the training dataset, we run the following command.
+`python setup.py install`
 
-```
-python filter_ngrams.py --tasks <name of the task, e.g. lambada, squad> --dedup-dataset <training dataset to deduplicate> <json key> --output <output training dataset>
-```
-We use 13-grams by default for the deduplication. When we find a 13-gram match in a training document, we split the document into two pieces and remove the 13-gram along with 200 characters from the both side of the 13-gram. We also remove any splitted document with less than 200 characters or if a document got splitted more than 10 times. These parameters can be changed using corresponding arguments.
+## Usage
 
-Only for the lambada task, we need to provide the path, `--lambada-path <path of the lambada test data>`.
+The deduplication is done through `./dedup.sh`. Set `ROOT_IN` to the directory which contains the subtree of files
+that should be deduplicated. These files must all have a text json-key and a document id in the 
+json-key set with `IDENTIFIER_KEY`, e.g. `md5`. 
 
-Several other features (e.g. save and load dictionary) have been added, look at `python filter_ngrams.py --help` for details.
+Then `ROOT_OUT` defines where to put the deduplicated files, that will have same file-tree structure as the
+input. This must be created beforehand and given write-permissions: 
+
+`sudo chmod -R a+rw <my_output_dir>`
+
+Remove the write-permissions when deduplication is done:
+
+`sudo chmod -R a+r-w <my_output_dir>`
+
+**Note:** *The write-permissions can probably be set for a parent directory, and then this won't have to be
+fixed for subdirectories that one wishes to do deduplication on.* 
+
+Both `ROOT_IN` and `ROOT_OUT` should contain absolute paths.
+
+### Parameters
+
+- **CHAR_N_GRAM**: *How many characters are hashed together in the sliding window*
+- **JACCARD_THRESHOLD**: *The threshold of approximated Jaccard similarity to consider a duplicate.*
+- **NUM_SEEDS**: *#hash-functions to use, must be multiple of NUM_BINS*
+- **NUM_BINS**: *#bins to divide the hash functions in*
+- **MAX_WORKERS_FINGERPRINTS**: *#CPU-workers to use for computing fingerprints.*
+- **MAX_WORKERS_JACCARD**: *#CPU-workers to use for jaccard comparisons, max=NUM_BINS*
+
+Adding hash-functions and bins increases the complexity but should result in more thorough deduplication.
+Adding more workers reduce execution time at the cost of RAM usage.
+
+### Run deduplication
+
+Once satisfied with configurations, run deduplication and preferably time it:
+
+`time ./dedup.sh`
+
+
+### Results
+
+`ROOT_OUT` now contains the deduplicated files, along with 2 more files:
+
+- **identified_duplicates.jsonl**: *Duplicate document ids found along with their Jaccard similarities*
+- **similar_documents.jsonl**: *The groups of duplicates, json-lines with group-id keys mapping to a list of documents ids*

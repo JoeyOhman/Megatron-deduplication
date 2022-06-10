@@ -3,6 +3,7 @@
 ########################################################################
 ########################## PARAMETER SETTINGS ##########################
 ########################################################################
+# Absolute paths!
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/deduplicated"
 ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_in"
@@ -22,16 +23,20 @@ NUM_SEEDS=10  # The Pile #hashes
 NUM_BINS=2  # Empirically set, only options with 10 seeds is 1, 2, 5, or 10. 2 seems to give best results/cost
 
 # Parallelization settings
-MAX_WORKERS_FINGERPRINTS=12
-MAX_WORKERS_JACCARD=1  # Extremely expensive in RAM
+MAX_WORKERS_FINGERPRINTS=4
+MAX_WORKERS_JACCARD=2
 
 
 echo ""
 echo "ROOT_IN: ${ROOT_IN}"
 echo "ROOT_OUT: ${ROOT_OUT}"
 
-if [ ! -d "$ROOT_OUT" ]
-then
+if [ "$ROOT_IN" == "$ROOT_OUT" ]; then
+    echo "ROOT_IN == ROOT_OUT, not allowed."
+    exit
+fi
+
+if [ ! -d "$ROOT_OUT" ]; then
     echo ""
     echo "ERROR: Output directory $ROOT_OUT does not exist, please create it and add write permissions beforehand."
     exit
@@ -46,8 +51,6 @@ in_file_paths=$(find $ROOT_IN -name "*.jsonl")
 # Create input files argument
 in_files_str_arg=""
 for path_in_file in $in_file_paths; do
-  echo ""
-  echo $path_in_file
 
   in_files_str_arg="$in_files_str_arg $path_in_file"
 
@@ -55,6 +58,8 @@ done
 
 # Find duplicates: Creates hashes for all documents, and does jaccard similarity on all documents with hash collisions
 # Uses LSH minhash => approximate comparisons to avoid O(N^2) complexity
+echo ""
+echo "***** find_duplicates.py *****"
 python find_duplicates.py \
           --inputs $in_files_str_arg \
           --doc_id_key $IDENTIFIER_KEY \
@@ -73,6 +78,8 @@ python find_duplicates.py \
 ########################## GROUP DUPLICATES ##########################
 ######################################################################
 # Groups documents that are similar
+echo ""
+echo "***** group_duplicate_url.py *****"
 python group_duplicate_url.py \
         $IDENTIFIED_DUPLICATES_FILE \
         $SIMILAR_ID_FILE \
@@ -84,6 +91,8 @@ python group_duplicate_url.py \
 ################################################################################################
 # Iterate through all input files and remove all duplicates except one within duplicate groups
 # Writes output files in the same file structure as the input structure
+echo ""
+echo "***** remove_group_duplicates.py *****"
 for path_in_file in $in_file_paths; do
   # Replace ROOT_IN with ROOT_OUT
   path_out_file="${path_in_file/"$ROOT_IN"/"$ROOT_OUT"}"
