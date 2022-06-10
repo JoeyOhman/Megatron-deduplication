@@ -70,3 +70,45 @@ Once satisfied with configurations, run deduplication and preferably time it:
 
 - **identified_duplicates.jsonl**: *Duplicate document ids found along with their Jaccard similarities*
 - **similar_documents.jsonl**: *The groups of duplicates, json-lines with group-id keys mapping to a list of documents ids*
+
+
+## Performance Analysis Experiments
+
+Experiments on Swedish subset of Oscar v3 (CommonCrawl-based, supposedly already deduplicated). 
+
+### Experiment Configuarations
+
+#### LSH-minhash settings:
+- **CHAR_N_GRAM=10** *Linked to from Nvidia Megatron Bootcamp: http://snap.stanford.edu/class/cs246-2012/slides/03-lsh.pdf*
+- **JACCARD_THRESHOLD=0.5** *The Pile, looks sound after qualitative checks*
+- **NUM_SEEDS=10** *The Pile #hashes*
+- **NUM_BINS=2** *Empirically set, only options with 10 seeds is 1, 2, 5, or 10. 2 seems to give best results/cost*
+
+#### Parallelization settings:
+- **MAX_WORKERS_FINGERPRINTS=4** *Adding more increases RAM, but does not give significant speedup*
+- **MAX_WORKERS_JACCARD=2** *This is the maximum with 2 bins, also seems to require equal RAM as fingerprint computations with 4 workers*
+
+
+### Experiment Results
+
+#### Plots
+
+##### RAM Usage
+
+![Alt text](images/oscar_ram_usage.png?raw=true "RAM")
+
+RAM seems to scale quite linearly, with `RAM=data_size*2`
+
+##### Execution Time
+
+![Alt text](images/oscar_exec_times.png?raw=true "Exec-times")
+
+Execution time also seems to scale linearly, with a slight sign of super-linear complexity. 
+With 1 minute / GB of data on this PC. Server might be slower.
+
+##### Removal Fraction
+
+![Alt text](images/oscar_removal_fraction.png?raw=true "Removal Fractions")
+
+Plot looks weird due to my human rounding. Nevertheless, in Oscarv3-sv the documents that are removed are 
+typically longer than average. Also, the more data we include in one deduplication session, the more are removed. 
