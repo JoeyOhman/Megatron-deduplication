@@ -5,8 +5,16 @@ IDENTIFIER_KEY="md5"
 
 # Loads all .jsonl files in DATA_IN_DIR, writes intermediate files to DATA_OUT_DIR, and deduplicated files to DATA_OUT_DIR/deduplicated/
 # DATA_IN_DIR="data_in/is-sv"
-SUB_DIR="is-sv"
+# SUB_DIR="is-sv"
+# SUB_DIR="da-is"
+# SUB_DIR="is-no"
+# SUB_DIR="da-no"
 # SUB_DIR="en-is"
+# SUB_DIR="en-sv"
+# SUB_DIR="da-en"
+# SUB_DIR="en-no"
+# SUB_DIR="no-sv"
+SUB_DIR="da-sv"
 
 DATA_IN_DIR="/data/nordic_pile/jsonl_raw/opus_clean/${SUB_DIR}"
 DATA_OUT_DIR="/data/nordic_pile/jsonl_raw/opus_dedup/${SUB_DIR}"
@@ -57,7 +65,7 @@ done
 # More seeds heavily increase RAM, but is often faster since it means more hashes/bin => less collisions & Jaccard sims
 python find_duplicates.py --inputs $in_files_str_arg --output $IDENTIFIED_DUPS_FILE \
         --heuristic-iter -1 --num-bands 2 --char-n-gram $CHAR_N_GRAM --num-seeds 10 \
-        --max-workers-fingerprints 8 --seed 1234
+        --max-workers-fingerprints 12 --seed 1234
 # --jaccard-parallel --max-workers-jaccard 4
 
 # reddit_is, one heavier dedup: 174.2 -> 156.3
