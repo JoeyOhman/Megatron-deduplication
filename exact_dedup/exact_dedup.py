@@ -2,7 +2,6 @@ import os
 import argparse
 import json
 import pickle
-from pathlib import Path
 
 from read_work_write_exact_dedup import read_work_write
 
@@ -32,7 +31,8 @@ def deduplicate(json_line):
     elif lang not in supported_langs:
         lang = NOT_SUPPORTED_LANG_CODE
 
-    md5, url = json_obj["md5"], json_obj.get("url", None)
+    # md5, url = json_obj["md5"], json_obj.get("url", None)
+    md5 = json_obj["md5"]
     # if json_obj["keep"] == 0:
         # return json_line, lang
 
@@ -44,16 +44,18 @@ def deduplicate(json_line):
         num_removed_md5 += 1
         keep = False
 
+    """
     if url is not None and url in url_seen:
         json_obj["keep"] = 0
         json_obj["filters"].append("url_dedup")
         num_removed_url += 1
         keep = False
+    """
 
     if keep:
         md5_seen.add(md5)
-        if url is not None:
-            url_seen.add(url)
+        # if url is not None:
+        #     url_seen.add(url)
 
     return json.dumps(json_obj, ensure_ascii=False), lang
 
