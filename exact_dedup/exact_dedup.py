@@ -13,7 +13,10 @@ num_total = 0
 num_removed_md5 = 0
 num_removed_url = 0
 
-lang_dirs = ["en", "no", "da", "sv", "is", "fo"]
+NOT_SUPPORTED_LANG_CODE = "non_supported_lang"
+
+supported_langs = ["en", "no", "da", "sv", "is", "fo"]
+lang_dirs = ["en", "no", "da", "sv", "is", "fo", NOT_SUPPORTED_LANG_CODE]
 
 ROOT_IN = ""
 
@@ -26,6 +29,8 @@ def deduplicate(json_line):
     lang = json_obj["lang"]
     if lang == "nn":
         lang = "no"
+    elif lang not in supported_langs:
+        lang = NOT_SUPPORTED_LANG_CODE
 
     md5, url = json_obj["md5"], json_obj.get("url", None)
     # if json_obj["keep"] == 0:
