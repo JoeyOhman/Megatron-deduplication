@@ -107,6 +107,7 @@ def main(args):
     load_persistent(args.output_root_dir)
 
     for input_path in args.input_files:
+        print()
         lang_to_file = {}
         for lang in lang_dirs:
             output_lang_dir = args.output_root_dir + "/" + lang
@@ -121,9 +122,10 @@ def main(args):
         print(f"input_path={input_path}")
         read_work_write(input_path, lang_to_file, deduplicate, args.input_root_dir)
         print(f"#total={num_total}, #md5_remove={num_removed_md5}, #url_remove={num_removed_url}")
-        print(f"%removed={round(100 * (num_removed_md5 + num_removed_url) / num_total, 2)}\n")
+        print(f"%removed={round(100 * (num_removed_md5 + num_removed_url) / num_total, 2)}")
+        save_persistent(args.output_root_dir)
 
-    save_persistent(args.output_root_dir)
+    # save_persistent(args.output_root_dir)
 
 
 if __name__ == '__main__':
