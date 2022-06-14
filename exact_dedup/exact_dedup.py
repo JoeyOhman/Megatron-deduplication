@@ -57,7 +57,7 @@ def deduplicate(json_line):
         # if url is not None:
         #     url_seen.add(url)
 
-    return json.dumps(json_obj, ensure_ascii=False), lang
+    return json.dumps(json_obj, ensure_ascii=False), lang, json_obj["keep"]
 
 
 def check_if_file_done(lang_to_file):
@@ -114,6 +114,8 @@ def main(args):
     load_persistent(args.output_root_dir)
 
     for input_path in args.input_files:
+        if "/web_commoncrawl/" not in input_path:
+            continue
         print()
         lang_to_file = {}
         for lang in lang_dirs:
@@ -122,12 +124,14 @@ def main(args):
             output_file_path_lang = input_path.replace(args.input_root_dir, output_lang_dir)
             lang_to_file[lang] = output_file_path_lang
 
+        dirty_root = args.output_root_dir + "/" + "dirty"
+        dirty_file_path = input_path.replace(args.input_root_dir, dirty_root)
         if check_if_file_done(lang_to_file):
             print(f"Skipping already finished file: {input_path}")
             continue
         # print(f"input_path={input_path}\noutput_path={output_path}")
         print(f"input_path={input_path}")
-        read_work_write(input_path, lang_to_file, deduplicate, args.input_root_dir)
+        read_work_write(input_path, lang_to_file, deduplicate, args.input_root_dir, dirty_file_path)
         print(f"#total={num_total}, #md5_remove={num_removed_md5}, #url_remove={num_removed_url}")
         print(f"%removed={round(100 * (num_removed_md5 + num_removed_url) / num_total, 2)}")
         save_persistent(args.output_root_dir)
