@@ -114,8 +114,8 @@ def main(args):
     load_persistent(args.output_root_dir)
 
     for input_path in args.input_files:
-        if "/web_commoncrawl/" not in input_path:
-            continue
+        # if "/web_commoncrawl/" not in input_path:
+        #     continue
         print()
         lang_to_file = {}
         for lang in lang_dirs:
