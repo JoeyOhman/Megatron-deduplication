@@ -132,6 +132,7 @@ dmypy.json
 LSH/
 data_in/
 data_out/
+data_out_fuzzy_dedup/
 data_out_merged/
 data_in_not_used/
 garbage/

@@ -6,8 +6,8 @@
 # Absolute paths!
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/deduplicated"
-ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_in"
-ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out"
+ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/sv"
+ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup/sv"
 
 IDENTIFIED_DUPLICATES_FILE="$ROOT_OUT/identified_duplicates.jsonl"
 SIMILAR_ID_FILE="$ROOT_OUT/similar_documents.jsonl"
