@@ -149,6 +149,8 @@ if __name__ == '__main__':
                              'output paths')
     parser.add_argument('--input_files', nargs='*', default=None,
                         help='List of the input files, e.g. --input_files asd.jsonl qwe.jsonl')
-
     args = parser.parse_args()
+
+    assert args.input_root_dir != args.output_root_dir
+
     main(args)
