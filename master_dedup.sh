@@ -3,8 +3,8 @@
 LANG="is"
 NUM_CHUNKS=1
 
-# COMMON_BASE_PATH="/home/joey/code/ai/deduplication_repos/Megatron-deduplication"
-COMMON_BASE_PATH="/data/nordic_pile/jsonl_train_format"
+COMMON_BASE_PATH="/home/joey/code/ai/deduplication_repos/Megatron-deduplication"
+# COMMON_BASE_PATH="/data/nordic_pile/jsonl_train_format"
 
 IN_DATA="$COMMON_BASE_PATH/exact_dedup/$LANG"
 # Only used if NUM_CHUNKS > 1

@@ -1,7 +1,8 @@
 #!/bin/bash
 
-ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup"
-ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_merged"
+COMMON_BASE_PATH="/home/joey/code/ai/deduplication_repos/Megatron-deduplication"
+ROOT_IN="$COMMON_BASE_PATH/fuzzy_dedup"
+ROOT_OUT="$COMMON_BASE_PATH/merged"
 
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/exact_dedup"

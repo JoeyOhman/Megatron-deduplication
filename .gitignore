@@ -130,9 +130,8 @@ dmypy.json
 
 .idea/
 LSH/
-data_in/
-data_out/
-data_out_fuzzy_dedup/
-data_out_merged/
-data_in_not_used/
+exact_dedup/
+chunked_before_fuzzy/
+fuzzy_dedup/
+merged/
 garbage/
