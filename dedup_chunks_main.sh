@@ -1,7 +1,9 @@
 #!/bin/bash
 
-ROOT_IN_CHUNK_DIR="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/sv"
-ROOT_OUT_CHUNK_DIR="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup/sv"
+# ROOT_IN_CHUNK_DIR="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/sv"
+# ROOT_OUT_CHUNK_DIR="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup/sv"
+ROOT_IN_CHUNK_DIR=$1
+ROOT_OUT_CHUNK_DIR=$2
 
 # Find chunk directories and sort them
 chunk_dirs_str=$(find $ROOT_IN_CHUNK_DIR -mindepth 1 -maxdepth 1 -type d)
@@ -30,14 +32,64 @@ for (( i=0; i<$num_chunks-1; i++ )); do
   for (( j=$i+1; j<$num_chunks; j++ )); do
     other_chunk_in="${chunk_dirs[$j]}"
     other_chunk_out="${other_chunk_in/"$ROOT_IN_CHUNK_DIR"/"$ROOT_OUT_CHUNK_DIR"}"
-    echo "**************************************************************************************************"
-    echo "$i" "$j"
-    echo $main_chunk_in
-    echo $other_chunk_in
+    # echo "**************************************************************************************************"
+    # echo "$i" "$j"
+    # echo $main_chunk_in
+    # echo $other_chunk_in
     bash dedup_chunk_pair.sh $main_chunk_in $other_chunk_in $main_chunk_out $other_chunk_out
     # exit
   done
 done
 
 
-# merge duplicate groups
+#############################################################################
+########################## MERGE DUPLICATES GROUPS ##########################
+#############################################################################
+MERGED_SIMILAR_DOCS_FILE="$ROOT_OUT_CHUNK_DIR/similar_documents_merged.jsonl"
+similar_docs_file_paths=$(find $ROOT_OUT_CHUNK_DIR -name "similar_documents_chunks_*.jsonl")
+
+# Create input files argument
+similar_docs_file_paths_str_arg=""
+for similar_doc_file in $similar_docs_file_paths; do
+
+  similar_docs_file_paths_str_arg="$similar_docs_file_paths_str_arg $similar_doc_file"
+
+done
+
+echo $similar_docs_file_paths_str_arg
+
+echo ""
+echo "***** merge_duplicate_groups.py *****"
+python merge_duplicate_groups.py \
+          --inputs $similar_docs_file_paths_str_arg \
+          --output $MERGED_SIMILAR_DOCS_FILE
+
+
+################################################################################################
+########################## REMOVE DUPLICATES & WRITE OUTPUT DOCUMENTS ##########################
+################################################################################################
+# Iterate through all input files and remove all duplicates except one within duplicate groups
+# Writes output files in the same file structure as the input structure
+
+all_input_files=$(find $ROOT_IN_CHUNK_DIR -name "*.jsonl")
+
+echo ""
+echo "***** remove_group_duplicates.py *****"
+for path_in_file in $all_input_files; do
+  # Replace ROOT_IN with ROOT_OUT
+  path_out_file="${path_in_file/"$ROOT_IN_CHUNK_DIR"/"$ROOT_OUT_CHUNK_DIR"}"
+
+  # Find output directory and create it
+  out_dir="$(dirname "${path_out_file}")"
+  mkdir -p $out_dir
+
+  # Remove duplicates and write output files
+  python remove_group_duplicates.py \
+          $MERGED_SIMILAR_DOCS_FILE \
+          $path_in_file \
+          $path_out_file \
+          md5
+done
+
+
+echo "Final data in $ROOT_OUT_CHUNK_DIR!"

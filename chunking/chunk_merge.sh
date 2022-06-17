@@ -1,14 +1,14 @@
 #!/bin/bash
 
-ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out"
+ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup"
 ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_merged"
 
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/exact_dedup"
 
-echo ""
-echo "ROOT_IN: ${ROOT_IN}"
-echo "ROOT_OUT: ${ROOT_OUT}"
+# echo ""
+# echo "ROOT_IN: ${ROOT_IN}"
+# echo "ROOT_OUT: ${ROOT_OUT}"
 
 if [ "$ROOT_IN" == "$ROOT_OUT" ]; then
     echo "ROOT_IN == ROOT_OUT, not allowed."
@@ -34,7 +34,7 @@ cmd="python chunk_merge.py
       --output_root_dir $ROOT_OUT
       --input_files $in_files_str_arg"
 
-echo $cmd
-echo ""
+# echo $cmd
+# echo ""
 
 $cmd

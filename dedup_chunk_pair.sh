@@ -1,25 +1,25 @@
 #!/bin/bash
 
-echo "INSIDE DEDUP"
+# echo "INSIDE DEDUP"
 
 main_chunk_in=$1
 other_chunk_in=$2
 main_chunk_out=$3
 other_chunk_out=$4
 
-echo $main_chunk_in
-echo $other_chunk_in
-echo $main_chunk_out
-echo $other_chunk_out
+# echo $main_chunk_in
+# echo $other_chunk_in
+# echo $main_chunk_out
+# echo $other_chunk_out
 
 main_chunk_idx=${main_chunk_in:0-1}
 other_chunk_idx=${other_chunk_in:0-1}
-echo "main_idx: $main_chunk_idx" "other_idx: $other_chunk_idx"
+# echo "main_idx: $main_chunk_idx" "other_idx: $other_chunk_idx"
 
 lang_dir_in=$(dirname $main_chunk_in)
 lang_dir_out=$(dirname $main_chunk_out)
-echo "lang_dir_in: $lang_dir_in"
-echo "lang_dir_out: $lang_dir_out"
+# echo "lang_dir_in: $lang_dir_in"
+# echo "lang_dir_out: $lang_dir_out"
 
 ########################################################################
 ########################## PARAMETER SETTINGS ##########################
@@ -33,8 +33,8 @@ echo "lang_dir_out: $lang_dir_out"
 IDENTIFIED_DUPLICATES_FILE="$lang_dir_out/identified_duplicates_chunks_${main_chunk_idx}_${other_chunk_idx}.jsonl"
 SIMILAR_ID_FILE="$lang_dir_out/similar_documents_chunks_${main_chunk_idx}_${other_chunk_idx}.jsonl"
 
-echo $IDENTIFIED_DUPLICATES_FILE
-echo $SIMILAR_ID_FILE
+# echo $IDENTIFIED_DUPLICATES_FILE
+# echo $SIMILAR_ID_FILE
 
 # Each document must have a unique value in this key.
 IDENTIFIER_KEY="md5"
@@ -50,7 +50,7 @@ NUM_BINS=2  # Empirically set, only options with 10 seeds is 1, 2, 5, or 10. 2 s
 MAX_WORKERS_FINGERPRINTS=4
 MAX_WORKERS_JACCARD=2
 
-echo ""
+# echo ""
 
 if [ "$main_chunk_in" == "$main_chunk_out" ]; then
     echo "main_chunk_in == main_chunk_out, not allowed."
@@ -70,7 +70,7 @@ fi
 
 
 in_file_paths=$(find $main_chunk_in $other_chunk_in -name "*.jsonl")
-echo $in_file_paths
+# echo $in_file_paths
 
 #####################################################################
 ########################## FIND DUPLICATES ##########################
@@ -140,4 +140,4 @@ for path_in_file in $in_file_paths; do
 done
 
 
-echo "Final data in $lang_dir_out!"
+# echo "Final data in $lang_dir_out!"

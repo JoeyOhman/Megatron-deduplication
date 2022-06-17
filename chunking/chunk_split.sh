@@ -1,17 +1,23 @@
 #!/bin/bash
 
-LANG="sv"
-NUM_CHUNKS=4
+# LANG="sv"
+# NUM_CHUNKS=4
 
-ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_in/$LANG"
-ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/$LANG"
+# ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_in/$LANG"
+# ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/$LANG"
 
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/exact_dedup"
 
-echo ""
-echo "ROOT_IN: ${ROOT_IN}"
-echo "ROOT_OUT: ${ROOT_OUT}"
+
+ROOT_IN=$1
+ROOT_OUT=$2
+
+NUM_CHUNKS=$3
+
+# echo ""
+# echo "ROOT_IN: ${ROOT_IN}"
+# echo "ROOT_OUT: ${ROOT_OUT}"
 
 if [ "$ROOT_IN" == "$ROOT_OUT" ]; then
     echo "ROOT_IN == ROOT_OUT, not allowed."
@@ -38,7 +44,7 @@ cmd="python chunk_split.py
       --input_files $in_files_str_arg
       --num_chunks $NUM_CHUNKS"
 
-echo $cmd
-echo ""
+# echo $cmd
+# echo ""
 
 $cmd

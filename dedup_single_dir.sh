@@ -6,8 +6,12 @@
 # Absolute paths!
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/deduplicated"
-ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/sv"
-ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup/sv"
+
+# ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/sv"
+# ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup/sv"
+
+ROOT_IN=$1
+ROOT_OUT=$2
 
 IDENTIFIED_DUPLICATES_FILE="$ROOT_OUT/identified_duplicates.jsonl"
 SIMILAR_ID_FILE="$ROOT_OUT/similar_documents.jsonl"
@@ -36,11 +40,11 @@ if [ "$ROOT_IN" == "$ROOT_OUT" ]; then
     exit
 fi
 
-if [ ! -d "$ROOT_OUT" ]; then
-    echo ""
-    echo "ERROR: Output directory $ROOT_OUT does not exist, please create it and add write permissions beforehand."
-    exit
-fi
+# if [ ! -d "$ROOT_OUT" ]; then
+#     echo ""
+#     echo "ERROR: Output directory $ROOT_OUT does not exist, please create it and add write permissions beforehand."
+#     exit
+# fi
 
 in_file_paths=$(find $ROOT_IN -name "*.jsonl")
 
