@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from read_work_write_chunk_split import read_work_write
 
@@ -10,12 +11,22 @@ def work_func(line):
     return line
 
 
+def is_file_is_done(file_path_template, num_chunks):
+    for i in range(num_chunks):
+        chunk_path = file_path_template.format(idx=i)
+        if os.path.isfile(chunk_path):
+            return True
+
+
 def main(args):
     global ROOT_IN
     ROOT_IN = args.input_root_dir
 
     for input_path in args.input_files:
         output_file_path_template = input_path.replace(args.input_root_dir, args.output_root_dir + "/chunk_{idx}")
+        if is_file_is_done(output_file_path_template, args.num_chunks):
+            continue
+
         read_work_write(input_path, output_file_path_template, work_func, args.input_root_dir, args.num_chunks)
 
 
