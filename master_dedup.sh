@@ -1,7 +1,7 @@
 #!/bin/bash
 
-LANG="is"
-NUM_CHUNKS=1
+LANG="da"
+NUM_CHUNKS=3
 
 # COMMON_BASE_PATH="/home/joey/code/ai/deduplication_repos/Megatron-deduplication"
 COMMON_BASE_PATH="/data/nordic_pile/jsonl_train_format"
