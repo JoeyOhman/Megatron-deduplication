@@ -17,6 +17,8 @@ def is_file_is_done(file_path_template, num_chunks):
         if os.path.isfile(chunk_path):
             return True
 
+    return False
+
 
 def main(args):
     global ROOT_IN
