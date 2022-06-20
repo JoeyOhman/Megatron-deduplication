@@ -63,6 +63,9 @@ def deduplicate(json_line):
 def check_if_file_done(lang_to_file):
     for lang in lang_dirs:
         output_file_path = lang_to_file[lang]
+        # If it is an OPUS file, skip, since it was deduplicated internally
+        if "opus_templated_with_metrics" in output_file_path:
+            return True
         # If we find an existing output file, this input file is already deduplicated
         if os.path.isfile(output_file_path):
             return True
@@ -113,7 +116,7 @@ def main(args):
 
     load_persistent(args.output_root_dir)
 
-    for input_path in args.input_files:
+    for i, input_path in enumerate(args.input_files):
         # if "/web_commoncrawl/" not in input_path:
         #     continue
         print()
@@ -134,9 +137,10 @@ def main(args):
         read_work_write(input_path, lang_to_file, deduplicate, args.input_root_dir, dirty_file_path)
         print(f"#total={num_total}, #md5_remove={num_removed_md5}, #url_remove={num_removed_url}")
         print(f"%removed={round(100 * (num_removed_md5 + num_removed_url) / num_total, 2)}")
-        save_persistent(args.output_root_dir)
+        if i % 10 == 0:
+            save_persistent(args.output_root_dir)
 
-    # save_persistent(args.output_root_dir)
+    save_persistent(args.output_root_dir)
 
 
 if __name__ == '__main__':
