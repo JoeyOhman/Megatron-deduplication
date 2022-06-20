@@ -77,5 +77,10 @@ if __name__ == '__main__':
               kept_docs, removed_docs, removed_chars))
 
     print(f"Done with {output_filename} :-)")
-    print(f"Removed {round(100 * removed_docs / (kept_docs + removed_docs), 2)}% of documents.")
-    print(f"Removed {round(100 * removed_chars / (kept_chars + removed_chars), 2)}% of characters.")
+    if kept_docs + removed_docs == 0:
+        doc_fraction, char_fraction = 0, 0
+    else:
+        doc_fraction = round(100 * removed_docs / (kept_docs + removed_docs), 2)
+        char_fraction = round(100 * removed_chars / (kept_chars + removed_chars), 2)
+    print(f"Removed {doc_fraction}% of documents.")
+    print(f"Removed {char_fraction}% of characters.")
