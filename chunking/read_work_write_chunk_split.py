@@ -4,7 +4,7 @@ import queue
 from typing import Callable, Dict, Tuple
 from pathlib import Path
 
-QUEUE_SIZE = 10000
+QUEUE_SIZE = 100000
 sentinel = object()
 
 
