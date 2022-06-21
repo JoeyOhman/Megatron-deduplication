@@ -25,7 +25,8 @@ def deduplicate(json_line):
 
     num_total += 1
     json_obj = json.loads(json_line)
-    lang = json_obj["lang"]
+    # lang = json_obj["lang"]
+    lang = "en"
     if lang == "nn":
         lang = "no"
     elif lang not in supported_langs:
