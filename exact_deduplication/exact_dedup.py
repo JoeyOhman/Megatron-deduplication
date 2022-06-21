@@ -67,6 +67,10 @@ def check_if_file_done(lang_to_file):
         # If it is an OPUS file, skip, since it was deduplicated internally
         if "opus_templated_with_metrics" in output_file_path:
             return True
+
+        # Skip this subreddit temporarily
+        if "subreddit-pics.jsonl" in output_file_path:
+            return True
         # If we find an existing output file, this input file is already deduplicated
         if os.path.isfile(output_file_path):
             return True
