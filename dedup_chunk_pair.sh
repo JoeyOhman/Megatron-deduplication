@@ -33,6 +33,12 @@ lang_dir_out=$(dirname $main_chunk_out)
 IDENTIFIED_DUPLICATES_FILE="$lang_dir_out/identified_duplicates_chunks_${main_chunk_idx}_${other_chunk_idx}.jsonl"
 SIMILAR_ID_FILE="$lang_dir_out/similar_documents_chunks_${main_chunk_idx}_${other_chunk_idx}.jsonl"
 
+# If similar_docs file already exists, just exit out of this script
+if [ -f "$SIMILAR_ID_FILE" ]; then
+    echo "$SIMILAR_ID_FILE exists, skipping."
+    exit
+fi
+
 # echo $IDENTIFIED_DUPLICATES_FILE
 # echo $SIMILAR_ID_FILE
 
