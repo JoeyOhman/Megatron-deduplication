@@ -1,12 +1,12 @@
 #!/bin/bash
 
-COMMON_PATH="/data/nordic_pile/jsonl_train_format"
+COMMON_PATH="/data/nordic_pile/jsonl_train_format/exact_dedup"
 
-ROOT_IN="$COMMON_PATH/chunked_before_fuzzy"
-ROOT_OUT="$COMMON_PATH/fuzzy_dedup"
+ROOT_IN="$COMMON_PATH/famlife"
+ROOT_OUT="$COMMON_PATH/famlife_fuzzy_dedup"
 
 # chunk_dirs=("chunk1" "chunk2" "chunk3" "chunk4" "chunk5" "chunk6" "chunk7" "chunk8" "chunk9")
-chunk_dirs=("chunk5" "chunk6" "chunk7" "chunk8" "chunk9" "chunk4")
+chunk_dirs=("familjeliv")
 
 for chunk_dir in ${chunk_dirs[@]}; do
   # Create full input path
