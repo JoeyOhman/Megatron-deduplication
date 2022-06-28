@@ -133,5 +133,6 @@ LSH/
 exact_dedup/
 chunked_before_fuzzy/
 fuzzy_dedup/
+final_data/
 merged/
 garbage/
