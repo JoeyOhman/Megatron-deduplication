@@ -24,9 +24,6 @@ def read_and_merge_groups(input_files):
             if line.strip() == "":
                 continue
             json_obj = json.loads(line)
-            # _, new_group_ids = json_obj.items()[0]
-            # print(json_obj)
-            # print(json_obj[next(iter(json_obj))])
             new_group_ids = json_obj[next(iter(json_obj))]
 
             # List of groups that should be merged, due to the new current group
@@ -61,14 +58,11 @@ def read_and_merge_groups(input_files):
                 merged_first_group = existing_groups[merged_first_group_idx]
 
                 # Merge groups into the selected group, and remove the others from the list of existing groups
-                groups_found = [existing_groups[i] for i in group_indices_found] + [merged_first_group]
-
-                merged_first_group = set().union(*groups_found)
-                # for group_index_found in group_indices_found:
-                #     merged_first_group |= existing_groups[group_index_found]
-
+                # for group_index_found in sorted(group_indices_found, reverse=True):
                 for group_index_found in group_indices_found:
+                    merged_first_group |= existing_groups[group_index_found]
                     existing_groups[group_index_found] = set()
+                    # del existing_groups[group_index_found]
 
                 # Finally, merge in the new group as well!
                 merged_first_group |= new_group_ids
