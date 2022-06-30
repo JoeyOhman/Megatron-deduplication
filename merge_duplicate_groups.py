@@ -61,7 +61,7 @@ def read_and_merge_groups(input_files):
                 merged_first_group = existing_groups[merged_first_group_idx]
 
                 # Merge groups into the selected group, and remove the others from the list of existing groups
-                groups_found = [existing_groups[i] for i in group_indices_found] + [merged_first_group]
+                groups_found = [existing_groups[i] for i in group_indices_found] + [merged_first_group, new_group_ids]
 
                 merged_first_group = set().union(*groups_found)
                 # for group_index_found in group_indices_found:
@@ -71,9 +71,11 @@ def read_and_merge_groups(input_files):
                     existing_groups[group_index_found] = set()
 
                 # Finally, merge in the new group as well!
-                merged_first_group |= new_group_ids
+                # merged_first_group |= new_group_ids
                 for doc_id in merged_first_group:
                     doc_to_idx[doc_id] = merged_first_group_idx
+
+                existing_groups[merged_first_group_idx] = merged_first_group
 
     # print("Num unique docs found:", len(all_docs_found))
     return existing_groups
