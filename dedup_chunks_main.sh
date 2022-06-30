@@ -60,9 +60,14 @@ echo $similar_docs_file_paths_str_arg
 
 echo ""
 echo "***** merge_duplicate_groups.py *****"
-python merge_duplicate_groups.py \
+
+if [ -f "$MERGED_SIMILAR_DOCS_FILE" ]; then
+  echo "$MERGED_SIMILAR_DOCS_FILE exists, skipping merge."
+else
+  python merge_duplicate_groups.py \
           --inputs $similar_docs_file_paths_str_arg \
           --output $MERGED_SIMILAR_DOCS_FILE
+fi
 
 
 ################################################################################################
