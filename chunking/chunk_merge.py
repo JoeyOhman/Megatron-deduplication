@@ -9,19 +9,45 @@ from read_work_write_chunk_merge import read_work_write
 ROOT_IN = ""
 
 NOT_SUPPORTED_LANG_CODE = "non_supported_lang"
-lang_dirs = ["en", "no", "da", "sv", "is", "fo", NOT_SUPPORTED_LANG_CODE, "dirty", "famlife", "code"]
+lang_dirs = ["en", "no", "da", "sv", "is", "fo", NOT_SUPPORTED_LANG_CODE, "dirty", "familjeliv", "code"]
 
 
 standard_keys = ["md5", "filename", "keep", "filters", "lang", "len_char", "len_utf8bytes", "len_words",
                  "len_sents", "text"]
 
+banned_forums = {
+    "Samhälle/Aktuella brott och kriminalfall",
+    "Samhälle/Brott och brottsbekämpning",
+    "Samhälle/Försvunna personer",
+    "Samhälle/Organiserad brottslighet",
+    "Övrigt/Arkiverade forum/Antisemitism, sionism och judiska maktföhållanden",
+    "Övrigt/Arkiverade forum/Kriminella nätverk och brottslighet [arkiverad version]"
+}
+
 
 def work_func(line):
     obj = json.loads(line)
-    # obj = {
-    #     k: obj[k] for k in standard_keys
-    # }
-    return json.dumps(obj, ensure_ascii=False), obj["keep"]
+    try:
+
+        # Remove if bad flashback forum
+        fb_forum = obj.get("forum", None)
+        if fb_forum is not None:
+            forum_path = "/".join(fb_forum)
+            if forum_path in banned_forums:
+                print("REMOVING FORUM")
+                obj["keep"] = 0
+                obj["filters"].append("bad_flashback_forum")
+
+        # Remove all non-standard json keys
+        obj = {
+            k: obj[k] for k in standard_keys
+        }
+
+        metrics = (obj["len_utf8bytes"], obj["len_char"])
+        return json.dumps(obj, ensure_ascii=False), obj["keep"], metrics
+    except KeyError:
+        return json.dumps(obj, ensure_ascii=False), None, None
+
     # return line, True
 
 
@@ -50,8 +76,9 @@ def get_output_to_inputs_mapping(input_root_dir: str, output_root_dir: str, inpu
 def main(args):
     global ROOT_IN
     ROOT_IN = args.input_root_dir
-    print(args.input_root_dir)
-    print(args.output_root_dir)
+    print("Merging files")
+    print("Reading files from:", args.input_root_dir)
+    print("Writing files to:", args.output_root_dir)
     # print(args.input_files[0])
     output_file_to_in_files = get_output_to_inputs_mapping(args.input_root_dir, args.output_root_dir, args.input_files)
     for output_file, input_files in output_file_to_in_files.items():
