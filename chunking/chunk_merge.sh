@@ -9,7 +9,7 @@ ROOT_OUT="$COMMON_BASE_PATH/final_data"
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/exact_dedup"
 
-NUM_WORKERS=12
+NUM_WORKERS=22
 
 # echo ""
 # echo "ROOT_IN: ${ROOT_IN}"

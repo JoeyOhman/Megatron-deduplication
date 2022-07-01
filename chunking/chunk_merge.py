@@ -12,8 +12,7 @@ NOT_SUPPORTED_LANG_CODE = "non_supported_lang"
 lang_dirs = ["en", "no", "da", "sv", "is", "fo", NOT_SUPPORTED_LANG_CODE, "dirty", "familjeliv", "code"]
 
 
-standard_keys = ["md5", "filename", "keep", "filters", "lang", "len_char", "len_utf8bytes", "len_words",
-                 "len_sents", "text"]
+standard_keys = ["md5", "keep", "filters", "lang", "len_char", "len_utf8bytes", "len_words", "len_sents", "text"]
 
 banned_forums = {
     "Samhälle/Aktuella brott och kriminalfall",
@@ -34,7 +33,6 @@ def work_func(line):
         if fb_forum is not None:
             forum_path = "/".join(fb_forum)
             if forum_path in banned_forums:
-                print("REMOVING FORUM")
                 obj["keep"] = 0
                 obj["filters"].append("bad_flashback_forum")
 
