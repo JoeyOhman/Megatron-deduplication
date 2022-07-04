@@ -1,6 +1,7 @@
 #!/bin/bash
 
-COMMON_PATH="/home/joey/code/ai/deduplication_repos/Megatron-deduplication"
+# COMMON_PATH="/home/joey/code/ai/deduplication_repos/Megatron-deduplication"
+COMMON_PATH="/data/nordic_pile/jsonl_train_format"
 ROOT_IN="$COMMON_PATH/final_data/kept"
 FILE_OUT="$COMMON_PATH/subset/subset.jsonl"
 
