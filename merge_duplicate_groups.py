@@ -1,14 +1,18 @@
 import argparse
 import json
+from typing import List, Set
+
 import tqdm
 
-# A B C
-# B C D -> A B C D
-# E F G H -> A B C D, E F G H
-# I J B E -> first group, but should really link both groups together??
 
+def read_and_merge_groups(input_files: List[str]) -> List[Set[str]]:
+    """
+    Reads all files and groups within them, and merges groups together when they contain an identical document
 
-def read_and_merge_groups(input_files):
+    :param input_files: input files with groups of document ids
+    :return: list of merged duplicate groups
+    """
+
     # Maps document id, to index in existing_groups list (constant lookup)
     doc_to_idx = {}
     # Contains groups (Python set) of document ids
@@ -84,7 +88,12 @@ def read_and_merge_groups(input_files):
     return existing_groups
 
 
-def main(args):
+def main(args) -> None:
+    """
+    Main driver of this file, merge groups of duplicates from several files and writes one file with merged groups
+
+    :param args: argparse object
+    """
     groups = read_and_merge_groups(args.inputs)
 
     # docs_kept = set()

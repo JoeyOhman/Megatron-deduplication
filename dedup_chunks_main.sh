@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This file handles pair-wise deduplication for all pairs among chunk directories
+
+
 # ROOT_IN_CHUNK_DIR="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/sv"
 # ROOT_OUT_CHUNK_DIR="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup/sv"
 ROOT_IN_CHUNK_DIR=$1
@@ -37,7 +40,6 @@ for (( i=0; i<$num_chunks-1; i++ )); do
     # echo $main_chunk_in
     # echo $other_chunk_in
     bash dedup_chunk_pair.sh $main_chunk_in $other_chunk_in $main_chunk_out $other_chunk_out
-    # exit
   done
 done
 

@@ -17,6 +17,8 @@ import argparse
 from functools import partial
 import itertools
 import json
+from typing import Set, Tuple, Any, Optional
+
 from lsh import cache, minhash
 import multiprocessing
 import numpy as np
@@ -25,12 +27,15 @@ import pickle
 import sys
 import os
 import psutil
-# from numba import jit
 
+# Used to track RAM usage for debugging
 max_ram_usage = 0
 
 
 def get_current_ram_usage():
+    """
+    Keeps track of the current and maximum RAM usage by this file, used for debugging only.
+    """
     global max_ram_usage
     current_process = psutil.Process(os.getpid())
     current_ram_usage = current_process.memory_full_info().pss
@@ -42,18 +47,28 @@ def get_current_ram_usage():
 
 # This function is adapted from:
 #   https://github.com/mattilyra/LSH/blob/master/examples/Introduction.ipynb
-# @jit(nopython=True)
-def shingles(text: str, char_ngram: int):
+def shingles(text: str, char_ngram: int) -> Set[str]:
+    """
+    Computes the char-n-gram shingles for a text
+    :param text: document text
+    :param char_ngram: how many chars to use in each shingle, i.e. size of sliding window
+    :return: the set of shingles
+    """
     return set(text[head:head + char_ngram] for head in range(0, len(text) - char_ngram))
-    # my_set = set()
-    # for head in range(0, len(text) - char_ngram):
-    #     my_set.add(text[head:head + char_ngram])
-    # return my_set
 
 
 # This function is adapted from:
 #  https://github.com/mattilyra/LSH/blob/master/examples/Introduction.ipynb
-def jaccard(set_a, set_b, args):
+def jaccard(set_a: Set[str], set_b: Set[str], args) -> float:
+    """
+    Returns the jaccard similarity given 2 sets
+
+    :param set_a: first set
+    :param set_b: second set
+    :param args: argparse object
+    :return: jaccard similarity
+    """
+
     if len(set_a) < 1 or len(set_b) < 1:
         return 0.0
 
@@ -68,7 +83,15 @@ def jaccard(set_a, set_b, args):
         return len(intersection) / len(union)
 
 
-def compute_fingerprint(line, key):
+def compute_fingerprint(line: str, key: str) -> Tuple[Optional[str], Optional[str], Any, bool]:
+    """
+    Parses a json document and computes the minhash fingerprint
+
+    :param line: json document in string format, that will be parsed
+    :param key: the key which holds the id of the document, e.g. "md5"
+    :return: 4-tuple: (doc_id, text, fingerprint, flag)
+    """
+
     try:
         myjson = json.loads(line)
         if "keep" in myjson and myjson["keep"] == 0:
@@ -83,7 +106,15 @@ def compute_fingerprint(line, key):
     return doc_id, text, fingerprint, True
 
 
-def doc_id_pairs_to_remove(args, bucket_ids, id_doc):
+def doc_id_pairs_to_remove(args, bucket_ids: list, id_doc: dict) -> Tuple[list, int, int]:
+    """
+    Wrapper for computing shingles and jaccard similarities and deciding what is considered duplicates
+
+    :param args: argparse object
+    :param bucket_ids: buckets from lsh object
+    :param id_doc: id to doc dict
+    :return: 3-tuple: (remove_ids_list, counter of duplicates, counter of total)
+    """
     remove_ids_list = []
     deduped_local, counter_local = 0, 0
     iteration = 0
@@ -91,7 +122,6 @@ def doc_id_pairs_to_remove(args, bucket_ids, id_doc):
         if args.heuristic_iter != -1 and iteration == args.heuristic_iter:
             break
 
-        # print(f"iteration={iteration}, len(bucket_urls)={len(bucket_urls)}")
         items = list(bucket_ids)
         remove_ids = []
         main_id = items[np.random.randint(0, len(items))]
@@ -108,7 +138,7 @@ def doc_id_pairs_to_remove(args, bucket_ids, id_doc):
             except Exception as e:
                 print('Error:', e)
                 jaccard_sim = 0.0
-            # print(i, other_url, jaccard_sim)
+
             if jaccard_sim > args.jaccard_threshold:
                 remove_ids.append({other_id: jaccard_sim})
                 deduped_local += 1
@@ -122,6 +152,12 @@ def doc_id_pairs_to_remove(args, bucket_ids, id_doc):
 
 
 def write_remove_ids_list(remove_ids_list, f_out):
+    """
+    Writing duplicate document ids to file
+
+    :param remove_ids_list: ids considered duplicates
+    :param f_out: output file handle
+    """
     if len(remove_ids_list) > 0:
         for each_id_remove in remove_ids_list:
             myjson = json.dumps(each_id_remove, ensure_ascii=False)
@@ -129,7 +165,15 @@ def write_remove_ids_list(remove_ids_list, f_out):
             f_out.write('\n'.encode('utf-8'))
 
 
-def compute_jaccard(each_bin, num_bins, start_time_local):
+def parallel_compute_jaccard_wrapper(each_bin, num_bins, start_time_local):
+    """
+    Wrapper for compute jaccard, used by parallel main wrapper of finding duplicates
+
+    :param each_bin: lsh bins to iterate over
+    :param num_bins: number of bins
+    :param start_time_local: time object to keep track of time elapsed
+    :return: 3-tuple: (remove_ids_list, counter of duplicates, counter of total)
+    """
 
     remove_ids_list = []
     deduped_local, counter_local, bucket_local = 0, 0, 0
@@ -156,6 +200,13 @@ def compute_jaccard(each_bin, num_bins, start_time_local):
 
 
 def find_pair_ids_parallel(args, lshcache, id_doc):
+    """
+    Parallel wrapper for finding duplicates, given fingerprints
+
+    :param args: argparse object
+    :param lshcache: lsh cache object from library
+    :param id_doc: not used, but might be here due to multiprocessing stuff? Nvidia originated code
+    """
     start_time = time.time()
     f_out = open(args.output, 'wb')
     deduped, counter = 0, 0
@@ -164,7 +215,7 @@ def find_pair_ids_parallel(args, lshcache, id_doc):
     # limited to # of bins)
     num_bins = len(lshcache.bins)
     pool = multiprocessing.Pool(min(num_bins, args.max_workers_jaccard))
-    compute_jaccard_partial = partial(compute_jaccard, num_bins=num_bins, start_time_local=start_time)
+    compute_jaccard_partial = partial(parallel_compute_jaccard_wrapper, num_bins=num_bins, start_time_local=start_time)
     # don't need to pass args and url_doc as they are already shared
     compute_jaccard_iter = pool.imap(compute_jaccard_partial, lshcache.bins)
 
@@ -189,7 +240,15 @@ def find_pair_ids_parallel(args, lshcache, id_doc):
     print(' Taken time for jaccard similariries {:.2f} seconds'.format(time.time() - start_time), flush=True)
 
 
-def find_pair_ids_sequential(args, lshcache, id_doc):
+def find_pair_ids_sequential(args, lshcache, id_doc: dict):
+    """
+    Sequential wrapper for finding duplicates, given fingerprints
+
+    :param args: argparse object
+    :param lshcache: lsh cache object from library
+    :param id_doc: dict to map from id to document
+    """
+
     start_time = time.time()
     f_out = open(args.output, 'wb')
     deduped, counter = 0, 0

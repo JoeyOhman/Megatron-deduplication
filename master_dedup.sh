@@ -1,9 +1,12 @@
 #!/bin/bash
 
-LANG="da"
-NUM_CHUNKS=3
+# This file is the master deduplication file, specify base language, num_chunks, and base path and
+# deduplication is done for all pairs using pair-wise deduplication, or as a single chunk if NUM_CHUNKS=1
 
-# COMMON_BASE_PATH="/home/joey/code/ai/deduplication_repos/Megatron-deduplication"
+
+LANG="sv"
+NUM_CHUNKS=9
+
 COMMON_BASE_PATH="/data/nordic_pile/jsonl_train_format"
 
 IN_DATA="$COMMON_BASE_PATH/exact_dedup/$LANG"

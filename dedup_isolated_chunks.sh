@@ -1,12 +1,14 @@
 #!/bin/bash
 
-COMMON_PATH="/data/nordic_pile/jsonl_train_format/exact_dedup"
+# This file handles deduplication for list of chunk directories, but in each chunk in isolation, i.e. no chunk pairs
 
-ROOT_IN="$COMMON_PATH/famlife"
-ROOT_OUT="$COMMON_PATH/famlife_fuzzy_dedup"
 
-# chunk_dirs=("chunk1" "chunk2" "chunk3" "chunk4" "chunk5" "chunk6" "chunk7" "chunk8" "chunk9")
-chunk_dirs=("familjeliv")
+COMMON_PATH="/data/nordic_pile/jsonl_train_format"
+
+ROOT_IN="$COMMON_PATH/exact_dedup/en"
+ROOT_OUT="$COMMON_PATH/fuzzy_dedup/en"
+
+chunk_dirs=("chunk1" "chunk2" "chunk3" "chunk4" "chunk5" "chunk6" "chunk7" "chunk8" "chunk9")
 
 for chunk_dir in ${chunk_dirs[@]}; do
   # Create full input path

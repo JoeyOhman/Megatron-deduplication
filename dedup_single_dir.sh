@@ -1,14 +1,14 @@
 #!/bin/bash
 
+# This file handles deduplication for a single directory
+
+
 ########################################################################
 ########################## PARAMETER SETTINGS ##########################
 ########################################################################
 # Absolute paths!
 # ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
 # ROOT_OUT="/data/nordic_pile/jsonl_train_format/deduplicated"
-
-# ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out/sv"
-# ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out_fuzzy_dedup/sv"
 
 ROOT_IN=$1
 ROOT_OUT=$2

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# echo "INSIDE DEDUP"
+# This file handles deduplication for two sub-directories (chunks)
 
 main_chunk_in=$1
 other_chunk_in=$2

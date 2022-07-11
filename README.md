@@ -27,12 +27,16 @@
 
 ## Usage
 
-The deduplication is done through `./dedup.sh`. Set `ROOT_IN` to the directory which contains the subtree of files
-that should be deduplicated. These files must all have a text json-key and a document id in the 
-json-key set with `IDENTIFIER_KEY`, e.g. `md5`. 
+The deduplication is primarily done through `./master_dedup.sh`. This file has 3 high-level arguments:
+- **LANG**: *really just a subdirectory name*
+- **NUM_CHUNKS**: *number of chunks to divide data into, set to 1 to prevent chunking*
+- **COMMON_BASE_PATH**: *which is the absolute path to the data root, under which you can find three required subdirectories: _exact_dedup/_ _chunked_before_fuzzy/_, and _fuzzy_dedup/_*
 
-Then `ROOT_OUT` defines where to put the deduplicated files, that will have same file-tree structure as the
-input. This must be created beforehand and given write-permissions: 
+Files will be read from the _exact_dedup/_ subdirectory, and written to _chunked_before_fuzzy/_ if `NUM_CHUNKS>1`, and finally (always) to _fuzzy_dedup/_.
+
+**Any subdirectory you write files to must be created beforehand and have write-permissions enabled!**
+
+Give write-permissions: 
 
 `sudo chmod -R a+rw <my_output_dir>`
 
@@ -41,12 +45,14 @@ Remove the write-permissions when deduplication is done:
 `sudo chmod -R a+r-w <my_output_dir>`
 
 **Note:** *The write-permissions can probably be set for a parent directory, and then this won't have to be
-fixed for subdirectories that one wishes to do deduplication on.* 
-
-Both `ROOT_IN` and `ROOT_OUT` should contain absolute paths.
+fixed for subdirectories that one wishes to do deduplication on. But it's always safe to remove write-permissions from 
+the directory you are only reading files from* 
 
 ### Parameters
 
+Parameters are specified in `dedup_single_dir.sh` or `dedup_chunk_pair.sh`:
+
+- **IDENTIFIER_KEY**: *The json field in which you can find the unique document id*
 - **CHAR_N_GRAM**: *How many characters are hashed together in the sliding window*
 - **JACCARD_THRESHOLD**: *The threshold of approximated Jaccard similarity to consider a duplicate.*
 - **NUM_SEEDS**: *#hash-functions to use, must be multiple of NUM_BINS*
@@ -61,22 +67,22 @@ Adding more workers reduce execution time at the cost of RAM usage.
 
 Once satisfied with configurations, run deduplication and preferably time it:
 
-`time ./dedup.sh`
+`time ./master_dedup.sh`
 
 
 ### Results
 
-`ROOT_OUT` now contains the deduplicated files, along with 2 more files:
+`fuzzy_dedup/` now contains the deduplicated files, along with 2 more files:
 
 - **identified_duplicates.jsonl**: *Duplicate document ids found along with their Jaccard similarities*
-- **similar_documents.jsonl**: *The groups of duplicates, json-lines with group-id keys mapping to a list of documents ids*
+- **similar_documents<_merged>.jsonl**: *The groups of duplicates, json-lines with group-id keys mapping to a list of documents ids*
 
 
 ## Performance Analysis Experiments
 
 Experiments on Swedish subset of Oscar v3 (CommonCrawl-based, supposedly already deduplicated). 
 
-### Experiment Configuarations
+### Experiment Configurations
 
 #### LSH-minhash settings:
 - **CHAR_N_GRAM=10** *Linked to from Nvidia Megatron Bootcamp: http://snap.stanford.edu/class/cs246-2012/slides/03-lsh.pdf*

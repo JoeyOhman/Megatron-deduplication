@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This file was used to create a toy dataset to try merging of files in a realistic file hierarchy.
+
+
 ROOT_DATA="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/fuzzy_dedup"
 SUB_DIR="web_commoncrawl/mc4/sv"
 
