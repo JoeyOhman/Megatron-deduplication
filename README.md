@@ -102,6 +102,20 @@ Once satisfied with configurations, run deduplication and preferably time it:
 - **similar_documents<_merged>.jsonl**: *The groups of duplicates, json-lines with group-id keys mapping to a list of documents ids*
 
 
+### Chunk Merging
+When each subdirectory have been fuzzily deduplicated, whether it is sharded or not,
+it can all be merged:
+
+1. `cd chunking`
+2. Specify the base path `COMMON_BASE_PATH` within `chunk_merge.sh`
+3. Run the shell script `./chunk_merge.sh`
+
+**IMPORTANT NOTE**: In `chunk_merge.py`, `lang_dirs` specifies all 
+subdirectories (top-level in fuzzy_dedup/) that should be merged. It is mandatory
+that any directory that should be merged is present in that list (add it to the list if needed).
+The list is used to determine the relative directory level before merging. 
+
+
 ### Performance Analysis Experiments
 
 Experiments on Swedish subset of Oscar v3 (CommonCrawl-based, supposedly already deduplicated). 
@@ -142,3 +156,4 @@ With 1 minute / GB of data on this PC. Server might be slower.
 
 Plot looks weird due to my human rounding. Nevertheless, in Oscarv3-sv the documents that are removed are 
 typically longer than average. Also, the more data we include in one deduplication session, the more are removed. 
+
