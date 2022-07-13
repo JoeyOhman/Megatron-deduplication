@@ -2,9 +2,9 @@
 
 # ROOT_IN="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_in"
 # ROOT_OUT="/home/joey/code/ai/deduplication_repos/Megatron-deduplication/data_out"
-
-ROOT_IN="/data/nordic_pile/jsonl_train_format/cleaned"
-ROOT_OUT="/data/nordic_pile/jsonl_train_format/exact_dedup"
+BASE_PATH="/data/nordic_pile/jsonl_train_format"
+ROOT_IN="$BASE_PATH/cleaned"
+ROOT_OUT="$BASE_PATH/exact_dedup"
 
 echo ""
 echo "ROOT_IN: ${ROOT_IN}"

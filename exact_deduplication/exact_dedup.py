@@ -6,7 +6,7 @@ import pickle
 from read_work_write_exact_dedup import read_work_write
 
 md5_seen = set()
-url_seen = set()
+# url_seen = set()
 
 num_total = 0
 num_removed_md5 = 0
@@ -14,8 +14,10 @@ num_removed_url = 0
 
 NOT_SUPPORTED_LANG_CODE = "non_supported_lang"
 
-supported_langs = ["en", "no", "da", "sv", "is", "fo", "famlife"]
-lang_dirs = ["en", "no", "da", "sv", "is", "fo", NOT_SUPPORTED_LANG_CODE, "famlife"]
+supported_langs = ["en", "no", "da", "sv", "is", "fo"]
+lang_dirs = ["en", "no", "da", "sv", "is", "fo", NOT_SUPPORTED_LANG_CODE]
+# supported_langs = ["en", "no", "da", "sv", "is", "fo", "familjeliv"]
+# lang_dirs = ["en", "no", "da", "sv", "is", "fo", NOT_SUPPORTED_LANG_CODE, "familjeliv"]
 
 ROOT_IN = ""
 
@@ -25,14 +27,14 @@ def deduplicate(json_line):
 
     num_total += 1
     json_obj = json.loads(json_line)
-    # lang = json_obj["lang"]
-    lang = ""
+    lang = json_obj["lang"]
+    # lang = ""
     if lang == "nn":
         lang = "no"
     elif lang not in supported_langs:
         lang = NOT_SUPPORTED_LANG_CODE
 
-    lang = "famlife"
+    # lang = "familjeliv"
     # md5, url = json_obj["md5"], json_obj.get("url", None)
     md5 = json_obj["md5"]
     # if json_obj["keep"] == 0:
@@ -79,7 +81,7 @@ def check_if_file_done(lang_to_file):
 
 
 def load_persistent(output_root):
-    return
+
     output_pickle_path = output_root + "/exact_dedup_checkpoint.pickle"
     try:
         with open(output_pickle_path, 'rb') as f:
@@ -100,7 +102,7 @@ def load_persistent(output_root):
 
 
 def save_persistent(output_root):
-    return
+
     pickle_dict = {
         "md5_seen": md5_seen,
         "url_seen": url_seen,
